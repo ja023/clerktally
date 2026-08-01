@@ -7,7 +7,11 @@ import androidx.room.PrimaryKey
 
 /**
  * A clerk's assignment to a project, carrying the agreed [dailyRate]. One row per
- * (project, clerk) pair — enforced by the unique index below.
+ * (project, clerk) pair — enforced by the unique index below. Removing a clerk from a
+ * project's roster never deletes the row: it stamps [removedAt] instead (soft removal),
+ * because the row may carry rate history a completed project's records still depend on.
+ * Re-adding the same clerk later reuses this row (clears [removedAt]) rather than
+ * inserting a second one, since the unique index would otherwise reject it.
  *
  * onDelete = RESTRICT on both links: a roster row is money-bearing (it sets the rate a
  * clerk is paid), so neither the project nor the clerk can be deleted while it exists.
@@ -41,4 +45,10 @@ data class RosterEntryEntity(
     val clerkId: String,
     /** Daily rate in MINOR units (e.g. cents). Money is never a floating-point value. */
     val dailyRate: Long,
+    /**
+     * Epoch millis this row stopped being an active roster assignment, or null while active.
+     * Filtering `removedAt IS NULL` is how every "who's currently on this project" query
+     * excludes soft-removed clerks while keeping their rate history intact for past days.
+     */
+    val removedAt: Long? = null,
 )

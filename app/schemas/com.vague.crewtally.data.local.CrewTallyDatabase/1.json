@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "a3a8c14b51ba890d1b61cec3f27bfebe",
+    "identityHash": "8bd488d570605453bf8ba28e1b4ce497",
     "entities": [
       {
         "tableName": "companies",
@@ -96,7 +96,7 @@
       },
       {
         "tableName": "projects",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `companyId` TEXT NOT NULL, `name` TEXT NOT NULL, `location` TEXT NOT NULL, `startDate` TEXT NOT NULL, `endDate` TEXT, `status` TEXT NOT NULL, `currency` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`companyId`) REFERENCES `companies`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `companyId` TEXT NOT NULL, `name` TEXT NOT NULL, `location` TEXT NOT NULL, `startDate` TEXT NOT NULL, `endDate` TEXT, `status` TEXT NOT NULL, `currency` TEXT NOT NULL, `notes` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`companyId`) REFERENCES `companies`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
         "fields": [
           {
             "fieldPath": "id",
@@ -144,6 +144,12 @@
             "columnName": "currency",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -179,7 +185,7 @@
       },
       {
         "tableName": "roster_entries",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `clerkId` TEXT NOT NULL, `dailyRate` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`clerkId`) REFERENCES `clerks`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `clerkId` TEXT NOT NULL, `dailyRate` INTEGER NOT NULL, `removedAt` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT , FOREIGN KEY(`clerkId`) REFERENCES `clerks`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT )",
         "fields": [
           {
             "fieldPath": "id",
@@ -204,6 +210,11 @@
             "columnName": "dailyRate",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "removedAt",
+            "columnName": "removedAt",
+            "affinity": "INTEGER"
           }
         ],
         "primaryKey": {
@@ -507,7 +518,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a3a8c14b51ba890d1b61cec3f27bfebe')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8bd488d570605453bf8ba28e1b4ce497')"
     ]
   }
 }

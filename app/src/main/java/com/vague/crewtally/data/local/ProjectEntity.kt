@@ -38,4 +38,5 @@ data class ProjectEntity(
     val status: ProjectStatus = ProjectStatus.ACTIVE,
     /** ISO 4217 currency code (e.g. "USD"). Cosmetic — drives the symbol only. */
     val currency: String,
+    val notes: String = "",
 )

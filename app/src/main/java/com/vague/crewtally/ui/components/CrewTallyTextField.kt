@@ -30,6 +30,8 @@ import com.vague.crewtally.ui.theme.CrewTallyTheme
  *
  * @param onFocusChanged used by [ContactSearchField] to know when the name field gains
  *   focus (to trigger the permission ask / live search); most call sites leave it null.
+ * @param leadingText optional fixed prefix inside the field (e.g. a currency symbol on
+ *   rate inputs) — text, not an icon, so it scales with the user's font size.
  */
 @Composable
 fun CrewTallyTextField(
@@ -39,6 +41,7 @@ fun CrewTallyTextField(
     label: String? = null,
     placeholder: String? = null,
     leadingIcon: ImageVector? = null,
+    leadingText: String? = null,
     singleLine: Boolean = true,
     minLines: Int = 1,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
@@ -70,6 +73,9 @@ fun CrewTallyTextField(
             },
             leadingIcon = leadingIcon?.let {
                 { Icon(imageVector = it, contentDescription = null) }
+            },
+            prefix = leadingText?.let {
+                { Text(text = it, style = MaterialTheme.typography.bodyLarge) }
             },
             singleLine = singleLine,
             minLines = minLines,

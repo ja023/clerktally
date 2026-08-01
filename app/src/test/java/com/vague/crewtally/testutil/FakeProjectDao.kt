@@ -2,38 +2,64 @@ package com.vague.crewtally.testutil
 
 import com.vague.crewtally.data.local.ProjectDao
 import com.vague.crewtally.data.local.ProjectEntity
+import com.vague.crewtally.data.local.ProjectStatus
+import com.vague.crewtally.data.local.ProjectSummary
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
 
-/** Hand-written [ProjectDao] fake — only [countByCompany] is exercised by Phase 1 tests. */
+/**
+ * In-memory [ProjectDao] fake for headless JVM ViewModel tests. Insertion order is preserved
+ * (updates replace in place, never reordering) so [getMostRecentCurrency] can mimic the real
+ * DAO's `ORDER BY rowid DESC` behavior without a real SQLite engine.
+ */
 class FakeProjectDao : ProjectDao {
-    private val projects = MutableStateFlow<List<ProjectEntity>>(emptyList())
+    private val entries = mutableListOf<ProjectEntity>()
+    private val entriesFlow = MutableStateFlow<List<ProjectEntity>>(emptyList())
+
+    /** Test-controlled join data for [observeSummariesByStatus] — set by the test as needed. */
+    var companyNames: Map<String, String> = emptyMap()
+    var rosterSizes: Map<String, Int> = emptyMap()
 
     override suspend fun upsert(project: ProjectEntity) {
-        projects.update { list -> list.filterNot { it.id == project.id } + project }
+        val index = entries.indexOfFirst { it.id == project.id }
+        if (index >= 0) entries[index] = project else entries.add(project)
+        entriesFlow.value = entries.toList()
     }
 
     override suspend fun delete(project: ProjectEntity) {
-        projects.update { list -> list.filterNot { it.id == project.id } }
+        entries.removeAll { it.id == project.id }
+        entriesFlow.value = entries.toList()
     }
 
-    override fun observeAll(): Flow<List<ProjectEntity>> =
-        projects.map { list -> list.sortedByDescending { it.startDate } }
+    override fun observeAll(): Flow<List<ProjectEntity>> = entriesFlow
 
     override fun observeByCompany(companyId: String): Flow<List<ProjectEntity>> =
-        projects.map { list -> list.filter { it.companyId == companyId } }
+        entriesFlow.map { list -> list.filter { it.companyId == companyId } }
 
     override fun observeById(id: String): Flow<ProjectEntity?> =
-        projects.map { list -> list.find { it.id == id } }
+        entriesFlow.map { list -> list.find { it.id == id } }
 
-    override suspend fun getById(id: String): ProjectEntity? = projects.value.find { it.id == id }
+    override suspend fun getById(id: String): ProjectEntity? = entries.find { it.id == id }
+
+    override fun observeSummariesByStatus(status: ProjectStatus): Flow<List<ProjectSummary>> =
+        entriesFlow.map { list ->
+            list.filter { it.status == status }.map { project ->
+                ProjectSummary(
+                    project = project,
+                    companyName = companyNames[project.companyId].orEmpty(),
+                    rosterSize = rosterSizes[project.id] ?: 0,
+                )
+            }
+        }
+
+    override suspend fun getMostRecentCurrency(): String? = entries.lastOrNull()?.currency
 
     override suspend fun countByCompany(companyId: String): Int =
-        projects.value.count { it.companyId == companyId }
+        entries.count { it.companyId == companyId }
 
-    fun seed(vararg entities: ProjectEntity) {
-        projects.value = entities.toList()
+    fun seed(vararg projects: ProjectEntity) {
+        entries.addAll(projects)
+        entriesFlow.value = entries.toList()
     }
 }
