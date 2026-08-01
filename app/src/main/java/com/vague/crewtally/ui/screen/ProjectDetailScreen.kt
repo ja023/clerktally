@@ -13,14 +13,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,6 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -38,6 +39,7 @@ import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.data.local.ProjectStatus
 import com.vague.crewtally.ui.components.CrewTallyButton
+import com.vague.crewtally.ui.components.CrewTallyConfirmDialog
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.viewmodel.ProjectDetailViewModel
 import com.vague.crewtally.util.CurrencyCodes
@@ -66,11 +68,12 @@ fun ProjectDetailScreen(projectId: String, navController: NavController, modifie
     var showMarkCompletedConfirm by remember { mutableStateOf(false) }
     var showReopenConfirm by remember { mutableStateOf(false) }
     val currentProject = project
+    val loadingDescription = stringResource(R.string.cd_loading)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(project?.name.orEmpty()) },
+                title = { Text(project?.name.orEmpty(), modifier = Modifier.semantics { heading() }) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
@@ -88,7 +91,9 @@ fun ProjectDetailScreen(projectId: String, navController: NavController, modifie
     ) { padding ->
         if (currentProject == null) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(
+                    modifier = Modifier.semantics { contentDescription = loadingDescription },
+                )
             }
         } else {
             Column(
@@ -121,13 +126,15 @@ fun ProjectDetailScreen(projectId: String, navController: NavController, modifie
                     roster = roster,
                     currencySymbol = CurrencyCodes.symbolFor(currentProject.currency),
                     onAddClerk = {
-                        navController.navigate("project/$projectId/roster/add/${currentProject.currency}")
+                        val encodedCurrency = Uri.encode(currentProject.currency)
+                        navController.navigate("project/$projectId/roster/add/$encodedCurrency")
                     },
                     onRowClick = { row ->
                         val encodedName = Uri.encode(row.clerkName)
+                        val encodedCurrency = Uri.encode(currentProject.currency)
                         navController.navigate(
                             "project/$projectId/roster/${row.entry.id}/edit/${row.entry.clerkId}/" +
-                                "$encodedName/${row.entry.dailyRate}/${currentProject.currency}",
+                                "$encodedName/${row.entry.dailyRate}/$encodedCurrency",
                         )
                     },
                 )
@@ -135,36 +142,32 @@ fun ProjectDetailScreen(projectId: String, navController: NavController, modifie
         }
 
         if (showMarkCompletedConfirm && currentProject != null) {
-            AlertDialog(
-                onDismissRequest = { showMarkCompletedConfirm = false },
-                title = { Text(stringResource(R.string.project_mark_completed_confirm_title)) },
-                text = { Text(stringResource(R.string.project_mark_completed_confirm_body)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.markCompleted(currentProject)
-                        showMarkCompletedConfirm = false
-                    }) { Text(stringResource(R.string.action_confirm)) }
+            CrewTallyConfirmDialog(
+                title = stringResource(R.string.project_mark_completed_confirm_title),
+                body = stringResource(R.string.project_mark_completed_confirm_body),
+                confirmLabel = stringResource(R.string.action_confirm),
+                dismissLabel = stringResource(R.string.action_cancel),
+                onConfirm = {
+                    viewModel.markCompleted(currentProject)
+                    showMarkCompletedConfirm = false
                 },
-                dismissButton = {
-                    TextButton(onClick = { showMarkCompletedConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
-                },
+                onDismiss = { showMarkCompletedConfirm = false },
+                isDestructive = false,
             )
         }
 
         if (showReopenConfirm && currentProject != null) {
-            AlertDialog(
-                onDismissRequest = { showReopenConfirm = false },
-                title = { Text(stringResource(R.string.project_reopen_confirm_title)) },
-                text = { Text(stringResource(R.string.project_reopen_confirm_body)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.reopen(currentProject)
-                        showReopenConfirm = false
-                    }) { Text(stringResource(R.string.action_confirm)) }
+            CrewTallyConfirmDialog(
+                title = stringResource(R.string.project_reopen_confirm_title),
+                body = stringResource(R.string.project_reopen_confirm_body),
+                confirmLabel = stringResource(R.string.action_confirm),
+                dismissLabel = stringResource(R.string.action_cancel),
+                onConfirm = {
+                    viewModel.reopen(currentProject)
+                    showReopenConfirm = false
                 },
-                dismissButton = {
-                    TextButton(onClick = { showReopenConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
-                },
+                onDismiss = { showReopenConfirm = false },
+                isDestructive = false,
             )
         }
     }

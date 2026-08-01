@@ -8,6 +8,9 @@ package com.vague.crewtally.util
 data class CurrencyOption(val code: String, val symbol: String)
 
 object CurrencyCodes {
+    /** ISO 4217 codes are three uppercase letters — the shape free-typed entry must match. */
+    private val CODE_PATTERN = Regex("^[A-Z]{3}$")
+
     val COMMON: List<CurrencyOption> = listOf(
         CurrencyOption("USD", "$"),
         CurrencyOption("LBP", "L£"),
@@ -24,4 +27,7 @@ object CurrencyCodes {
     /** The display symbol for [code], falling back to the code itself with a trailing space. */
     fun symbolFor(code: String): String =
         COMMON.find { it.code.equals(code, ignoreCase = true) }?.symbol ?: "$code "
+
+    /** Whether [code] (expected already trimmed + uppercased) is a well-formed ISO 4217 code. */
+    fun isValidCode(code: String): Boolean = CODE_PATTERN.matches(code)
 }

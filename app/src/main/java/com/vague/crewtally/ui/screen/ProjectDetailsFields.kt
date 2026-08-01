@@ -11,6 +11,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.vague.crewtally.R
 import com.vague.crewtally.data.local.CompanyEntity
 import com.vague.crewtally.ui.components.CrewTallyDateField
@@ -113,14 +115,22 @@ fun ProjectDetailsFields(
 
 @Composable
 private fun NoCompaniesNotice(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    val label = stringResource(R.string.project_field_company)
+    val notice = stringResource(R.string.project_no_companies_notice)
+    Column(
+        // Merged so TalkBack reads the field label and the error notice as one node,
+        // matching how a normal field's label + supporting text is announced together.
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { contentDescription = "$label. $notice" },
+    ) {
         Text(
-            text = stringResource(R.string.project_field_company),
+            text = label,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            text = stringResource(R.string.project_no_companies_notice),
+            text = notice,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error,
         )

@@ -22,6 +22,9 @@
     <string name="cd_nav_projects">Projects tab</string>
     <string name="cd_nav_clerks">Clerks tab</string>
     <string name="cd_nav_more">More tab</string>
+    <string name="cd_loading">Loading</string>
+    <string name="cd_dropdown_expanded">Expanded</string>
+    <string name="cd_dropdown_collapsed">Collapsed</string>
 
     <!-- Shared form field labels (clerks + companies) -->
     <string name="field_name">Name</string>
@@ -108,7 +111,7 @@
     <string name="project_error_company_required">Choose a company</string>
     <string name="project_no_companies_notice">No companies yet. Add one under More before creating a project.</string>
     <string name="project_field_currency">Currency</string>
-    <string name="project_error_currency_required">Choose or enter a currency code</string>
+    <string name="project_error_currency_required">Enter a 3-letter currency code</string>
     <string name="project_currency_hint">Pick a common code, or type any ISO currency code</string>
     <string name="project_field_start_date">Start date</string>
     <string name="project_field_location">Location</string>
@@ -148,6 +151,7 @@
     <string name="add_clerk_rate_title">Set daily rate</string>
     <string name="add_clerk_none_available">Every active clerk is already on this roster.</string>
     <string name="roster_rate_field_label">Daily rate</string>
+    <string name="roster_rate_field_label_for_clerk">Daily rate - %1$s</string>
     <string name="roster_rate_edit_hint">Changing this only affects future attendance days — past days keep the rate they were recorded at.</string>
     <string name="roster_remove_clerk">Remove from roster</string>
     <string name="roster_remove_confirm_title">Remove from roster?</string>

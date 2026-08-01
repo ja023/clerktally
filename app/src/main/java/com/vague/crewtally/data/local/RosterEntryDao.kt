@@ -10,6 +10,15 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface RosterEntryDao {
 
+    /**
+     * Room's generated upsert: INSERT, falling back to an UPDATE by primary key on conflict.
+     * ⚠️ For a (projectId, clerkId) pair that already has a row (active or soft-removed),
+     * callers MUST reuse that row's existing [RosterEntryEntity.id] rather than minting a
+     * new one. A fresh id for an existing pair fails the INSERT on the unique index, and the
+     * UPDATE fallback then matches zero rows (wrong id) — the write is silently dropped, not
+     * an error. See [com.vague.crewtally.data.local.ProjectRosterWriter.upsertRosterEntryForPair]
+     * for the transaction that makes the required "look up id, then write" atomic.
+     */
     @Upsert
     suspend fun upsert(entry: RosterEntryEntity)
 

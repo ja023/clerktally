@@ -19,6 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -72,6 +76,12 @@ fun CreateProjectScreen(navController: NavController, modifier: Modifier = Modif
                             CreateProjectStep.DETAILS -> stringResource(R.string.create_project_step_details_title)
                             CreateProjectStep.ROSTER -> stringResource(R.string.create_project_step_roster_title)
                             CreateProjectStep.RATES -> stringResource(R.string.create_project_step_rates_title)
+                        },
+                        // The title is the only signal a step changed — no new screen, no
+                        // nav transition TalkBack would otherwise announce on its own.
+                        modifier = Modifier.semantics {
+                            heading()
+                            liveRegion = LiveRegionMode.Polite
                         },
                     )
                 },

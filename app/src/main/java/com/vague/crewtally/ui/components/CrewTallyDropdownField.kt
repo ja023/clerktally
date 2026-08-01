@@ -19,6 +19,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import com.vague.crewtally.R
 import com.vague.crewtally.ui.theme.CrewTallyShape
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 
@@ -46,6 +53,8 @@ fun CrewTallyDropdownField(
     optionLabel: (String) -> String = { it },
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val expandedStateDescription = stringResource(R.string.cd_dropdown_expanded)
+    val collapsedStateDescription = stringResource(R.string.cd_dropdown_collapsed)
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -84,7 +93,16 @@ fun CrewTallyDropdownField(
                         enabled = true,
                     )
                     .fillMaxWidth()
-                    .heightIn(min = CrewTallyTheme.dimens.primaryTarget),
+                    .heightIn(min = CrewTallyTheme.dimens.primaryTarget)
+                    // The bare OutlinedTextField has no accessible name of its own — the
+                    // [label] Text above it is a separate node TalkBack won't associate with
+                    // the field automatically, so this merges the whole thing into one
+                    // announced control with its open/closed state spoken too.
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = label
+                        stateDescription = if (expanded) expandedStateDescription else collapsedStateDescription
+                        role = Role.DropdownList
+                    },
             )
             ExposedDropdownMenu(
                 expanded = expanded,

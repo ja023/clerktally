@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import com.vague.crewtally.R
 import com.vague.crewtally.data.local.RosterRowSummary
 import com.vague.crewtally.ui.components.CrewTallyListRow
@@ -48,6 +50,7 @@ fun ProjectRosterSection(
                 text = stringResource(R.string.project_roster_heading),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.semantics { heading() },
             )
             TextButton(onClick = onAddClerk) {
                 Icon(

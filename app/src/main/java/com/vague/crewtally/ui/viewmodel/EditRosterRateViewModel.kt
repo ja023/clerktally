@@ -56,6 +56,9 @@ class EditRosterRateViewModel(
     }
 
     private fun onSave() {
+        // The Compose disabled-state on the Save button lags a fast double tap by a frame;
+        // this guard is the actual protection against firing the save twice.
+        if (_state.value.isSaving) return
         val rate = Money.parseToMinorUnits(_state.value.rateInput)
         if (rate == null || rate <= 0L) {
             _state.update { it.copy(rateError = true) }
@@ -77,7 +80,11 @@ class EditRosterRateViewModel(
     }
 
     private fun onRemove() {
+        // Same double-tap protection as onSave — Remove and Save share isSaving so a fast
+        // double tap on either one can't fire two writes for this row.
+        if (_state.value.isSaving) return
         viewModelScope.launch {
+            _state.update { it.copy(isSaving = true) }
             rosterEntryDao.upsert(
                 RosterEntryEntity(
                     id = rosterEntryId,
@@ -87,7 +94,7 @@ class EditRosterRateViewModel(
                     removedAt = System.currentTimeMillis(),
                 ),
             )
-            _state.update { it.copy(removeComplete = true) }
+            _state.update { it.copy(isSaving = false, removeComplete = true) }
         }
     }
 

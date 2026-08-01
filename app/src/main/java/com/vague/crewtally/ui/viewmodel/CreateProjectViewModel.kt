@@ -15,6 +15,7 @@ import com.vague.crewtally.data.local.ProjectRosterWriter
 import com.vague.crewtally.data.local.ProjectStatus
 import com.vague.crewtally.data.local.RosterEntryDao
 import com.vague.crewtally.data.local.RosterEntryEntity
+import com.vague.crewtally.util.CurrencyCodes
 import com.vague.crewtally.util.Money
 import java.time.LocalDate
 import java.util.UUID
@@ -138,7 +139,9 @@ class CreateProjectViewModel(
         val current = _state.value
         val nameError = current.name.isBlank()
         val companyError = current.selectedCompanyId == null
-        val currencyError = current.currency.isBlank()
+        // The curated dropdown values are always valid; this only gates free-text entry
+        // (e.g. "US" or "dollars") that would otherwise reach save as a bogus currency code.
+        val currencyError = !CurrencyCodes.isValidCode(current.currency.trim().uppercase())
         if (nameError || companyError || currencyError) {
             _state.update { it.copy(nameError = nameError, companyError = companyError, currencyError = currencyError) }
             return
@@ -189,6 +192,9 @@ class CreateProjectViewModel(
     }
 
     private fun onSave() {
+        // The Compose disabled-state on the Save button lags a fast double tap by a frame;
+        // this guard is the actual protection against firing the save twice.
+        if (_state.value.isSaving) return
         val current = _state.value
         val selectedClerkIds = current.selectedClerkIds.toList()
         val parsedRates = selectedClerkIds.associateWith { Money.parseToMinorUnits(current.rateInputs[it].orEmpty()) }

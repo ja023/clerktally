@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -61,10 +63,12 @@ fun ProjectsScreen(navController: NavController, modifier: Modifier = Modifier) 
             text = stringResource(R.string.nav_projects),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(
-                horizontal = CrewTallyTheme.dimens.screenEdge,
-                vertical = CrewTallyTheme.dimens.spaceLg,
-            ),
+            modifier = Modifier
+                .padding(
+                    horizontal = CrewTallyTheme.dimens.screenEdge,
+                    vertical = CrewTallyTheme.dimens.spaceLg,
+                )
+                .semantics { heading() },
         )
         CrewTallySegmentedControl(
             options = listOf(

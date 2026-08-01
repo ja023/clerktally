@@ -16,6 +16,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import com.vague.crewtally.R
 import com.vague.crewtally.data.local.ClerkEntity
@@ -61,6 +64,7 @@ fun CreateProjectRosterStep(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
         } else {
@@ -90,7 +94,9 @@ fun CreateProjectRosterStep(
             ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = CrewTallyTheme.dimens.screenEdge),
+            modifier = Modifier
+                .padding(horizontal = CrewTallyTheme.dimens.screenEdge)
+                .semantics { liveRegion = LiveRegionMode.Polite },
         )
         CrewTallyButton(
             text = stringResource(R.string.action_next),

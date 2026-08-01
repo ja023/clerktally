@@ -3,11 +3,11 @@ package com.vague.crewtally.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,19 +37,24 @@ fun <T> CrewTallySegmentedControl(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(CrewTallyTheme.dimens.primaryTarget)
+            // A fixed .height() clips at large font scales (200% dynamic type) since the
+            // option labels no longer fit the exact 56dp band — a minimum lets the control
+            // grow with the text instead of cutting it off.
+            .heightIn(min = CrewTallyTheme.dimens.primaryTarget)
             .clip(CrewTallyShape.pill)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(CrewTallyTheme.dimens.spaceXxs),
     ) {
-        Row(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
+        // selectableGroup() so TalkBack announces "N of M" for each option instead of
+        // treating them as unrelated tabs.
+        Row(modifier = Modifier.fillMaxWidth().selectableGroup()) {
             options.forEach { (value, label) ->
                 val isSelected = value == selected
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxHeight()
+                        .heightIn(min = CrewTallyTheme.dimens.primaryTarget)
                         .clip(RoundedCornerShape(CrewTallyTheme.radius.pill))
                         .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .selectable(

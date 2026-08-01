@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.vague.crewtally.data.local.CompanyDao
 import com.vague.crewtally.data.local.CompanyEntity
 import com.vague.crewtally.data.local.ProjectDao
+import com.vague.crewtally.util.CurrencyCodes
 import java.time.LocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -88,10 +89,15 @@ class EditProjectViewModel(
     }
 
     private fun onSave() {
+        // The Compose disabled-state on the Save button lags a fast double tap by a frame;
+        // this guard is the actual protection against firing the save twice.
+        if (_state.value.isSaving) return
         val current = _state.value
         val nameError = current.name.isBlank()
         val companyError = current.selectedCompanyId == null
-        val currencyError = current.currency.isBlank()
+        // The curated dropdown values are always valid; this only gates free-text entry
+        // (e.g. "US" or "dollars") that would otherwise reach save as a bogus currency code.
+        val currencyError = !CurrencyCodes.isValidCode(current.currency.trim().uppercase())
         if (nameError || companyError || currencyError) {
             _state.update { it.copy(nameError = nameError, companyError = companyError, currencyError = currencyError) }
             return
@@ -99,7 +105,13 @@ class EditProjectViewModel(
         val companyId = current.selectedCompanyId ?: return
         viewModelScope.launch {
             _state.update { it.copy(isSaving = true) }
-            val base = projectDao.getById(projectId) ?: return@launch
+            val base = projectDao.getById(projectId)
+            if (base == null) {
+                // The project vanished mid-save (e.g. deleted from another entry point) —
+                // reset isSaving so the button doesn't stay stuck disabled forever.
+                _state.update { it.copy(isSaving = false) }
+                return@launch
+            }
             val updated = base.copy(
                 name = current.name.trim(),
                 companyId = companyId,

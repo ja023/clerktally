@@ -21,6 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -50,7 +53,12 @@ fun EditProjectScreen(projectId: String, navController: NavController, modifier:
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.edit_project_title)) },
+                title = {
+                    Text(
+                        text = stringResource(R.string.edit_project_title),
+                        modifier = Modifier.semantics { heading() },
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
@@ -60,8 +68,11 @@ fun EditProjectScreen(projectId: String, navController: NavController, modifier:
         },
     ) { padding ->
         if (!state.isLoaded) {
+            val loadingDescription = stringResource(R.string.cd_loading)
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(
+                    modifier = Modifier.semantics { contentDescription = loadingDescription },
+                )
             }
         } else {
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {

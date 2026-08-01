@@ -93,6 +93,42 @@ Fable orchestrates; sub-decisions inside each phase still go to Jad as MCQs befo
 - **Roster after creation — fully editable anytime**: add clerk (asks rate, pre-filled from last job), edit a clerk's rate (affects FUTURE attendance days only; past days keep rateSnapshot), remove clerk (history intact, they stop appearing on new days; roster row soft-removed, not deleted, since it may carry the rate history).
 - ProjectEntity gains a notes field if missing — still schema v1 (amendable until first install).
 
+## Phase 3 LOCKED decisions (2026-08-01) — Attendance daily loop
+
+- Entry: project detail gains a prominent "Take attendance" action → day screen, default TODAY, prev/next day arrows + date picker (backfill any date, including before startDate — warn, don't block).
+- **New day starts UNMARKED** (no AttendanceEntry row = unmarked). One big "Mark all present" button, then tap exceptions. Row tap cycles/toggles Present ↔ Absent, ≥56dp targets, state visually unmistakable (not color-only). A day with unmarked clerks shows a soft reminder line, never blocks.
+- **Instant auto-save per tap** — no Save button. Present=true / Absent=false rows written immediately with rateSnapshot copied from the roster at write time. Unmarking (back to no-answer) deletes the row (only if it has no extras; with extras, warn first).
+- **Extras attach to the day regardless of present/absent** (fronted gas on a day off, deductions). Extras UI per clerk row: opens a sheet listing that day's lines: preset labels Lunch / Transport / Bonus + free-text label, amount (negative allowed = deduction, wording "Deduction" with minus shown). An absent/unmarked clerk with extras gets an AttendanceEntry row (present=false) to carry them.
+- **Walk-ins: day-only + optional roster join.** "Add clerk for this day" → picker of active clerks not on today's list → rate (pre-filled from last rate anywhere) → checkbox "Also add to project roster" (default OFF). Day-only walk-in gets an AttendanceEntry with rateSnapshot but NO roster row. Remove-for-day removes that day's row (warn if it has extras).
+- Attendance history: project detail also gets a compact per-day summary list (date, N present, extras total) → tapping opens that day.
+
+## Phase 4 LOCKED decisions (2026-08-01) — Payments + balances + Home
+
+- **Clerk balance screen** (per project): project detail → tap clerk → balance: days worked × rate + extras − payments = owed, big number, full ledger beneath (attendance-derived earnings by day, extras, payments). "Record payment" pre-fills FULL owed (= paid in full); editable down for partial. Payment fields: amount, date (default today), optional note.
+- **Advance = overpay with confirm dialog**: "This is X more than owed. Record the extra as an advance?" Balance may go negative, displayed as "Advance" not a red error.
+- **Payments editable AND deletable** afterwards, always behind a confirm showing the balance impact (consistent with locked never-lock-always-warn rule).
+- **Home tab = projects-first dashboard** (Jad's explicit pick over money-first): active projects on top, each with a "Take attendance" shortcut; outstanding totals (per currency) below; then owed-clerks list sorted by amount (tap → balance screen).
+- **Clerk profile** (Clerks tab → clerk): cross-project totals earned/paid/owed grouped per currency + per-project rows linking to balance screens.
+- Cross-currency amounts are NEVER summed — one total per currency, always.
+
+## Phase 5 LOCKED decisions (2026-08-01) — Reports + backup + settings
+
+- **Reports in TEXT + PDF**, both offered via the system share sheet. Clerk statement (per clerk per project): days worked, rate, extras lines, payments, balance. Company totals (per company): per-project breakdown + grand totals per currency. Text is WhatsApp-clean; PDF simple and printable (no branding beyond app name).
+- **Backup**: single-file JSON export of the whole DB via share sheet + "Restore from file" (SAF picker) with a confirm that restore REPLACES current data. Gentle nudge (non-blocking banner on More) if no export in 30 days. Schema-versioned payload; import validates before touching the DB.
+- **Settings** (More): backup/restore entries, the 30-day nudge toggle, About (version, privacy policy text viewable offline). Nothing else in v1.
+
+## Phase 6 LOCKED decisions (2026-08-01) — Polish + packaging
+
+- **App icon: TALLY MARKS concept** (four strokes + diagonal fifth), adaptive icon, monochrome layer for themed icons.
+- Final a11y audit sweep across all phases; fix everything CRITICAL/HIGH.
+- Release signing config + keystore generated locally (NEVER committed; stored outside repo, path + instructions in a local note for Jad).
+- Play-readiness artifacts drafted for Jad's approval (nothing uploaded by the agent): store listing copy, data-safety answers (offline, READ_CONTACTS optional-use disclosure), privacy policy text.
+- Version 1.0.0, versionCode 1. Room schema FROZEN at v1 the moment the final APK installs on Jad's phone — every later change is a migration.
+
+## Autonomous run contract (Jad, 2026-08-01)
+
+Phases 3→6 run WITHOUT check-in questions: build → 3-reviewer pass (kotlin, general, a11y) → fix batch → green gate → commit, phase by phase, sequentially in the main repo. **ONE final APK after Phase 6** pushed to the phone (plus the already-requested Phase 0-2 APK install happening now). Stop and ask ONLY if something contradicts a LOCKED decision. Device feedback from Jad folds in whenever it arrives.
+
 ## Review debt (accepted findings, deliberately deferred — address in the phase noted)
 
 - **Extract shared `RecordLifecycleActions` composable** (archive/unarchive/delete buttons + 3 confirm dialogs, ~70 lines duplicated between ClerkFormScreen and CompanyFormScreen) — do this in Phase 3 BEFORE a third form copies the pattern.

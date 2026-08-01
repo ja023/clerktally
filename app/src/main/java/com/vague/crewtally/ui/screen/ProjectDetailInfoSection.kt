@@ -10,6 +10,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.vague.crewtally.R
 import com.vague.crewtally.data.local.ProjectEntity
 import com.vague.crewtally.data.local.ProjectStatus
@@ -59,7 +61,13 @@ private fun statusLabel(status: ProjectStatus): String = when (status) {
 
 @Composable
 private fun DetailRow(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        // Merged into one node so TalkBack reads "Company. Acme Inc." as a single swipe
+        // stop instead of two separate label/value announcements.
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { contentDescription = "$label. $value" },
+    ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,

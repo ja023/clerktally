@@ -7,10 +7,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.vague.crewtally.data.local.ClerkDao
 import com.vague.crewtally.data.local.ClerkEntity
+import com.vague.crewtally.data.local.ProjectRosterWriter
 import com.vague.crewtally.data.local.RosterEntryDao
-import com.vague.crewtally.data.local.RosterEntryEntity
 import com.vague.crewtally.util.Money
-import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -53,6 +52,7 @@ class AddRosterClerkViewModel(
     private val projectId: String,
     clerkDao: ClerkDao,
     private val rosterEntryDao: RosterEntryDao,
+    private val writer: ProjectRosterWriter,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AddRosterClerkUiState())
@@ -97,6 +97,9 @@ class AddRosterClerkViewModel(
     }
 
     private fun onSave() {
+        // The Compose disabled-state on the Save button lags a fast double tap by a frame;
+        // this guard is the actual protection against firing the save twice.
+        if (_state.value.isSaving) return
         val current = _state.value
         val clerkId = current.selectedClerkId ?: return
         val rate = Money.parseToMinorUnits(current.rateInput)
@@ -106,16 +109,10 @@ class AddRosterClerkViewModel(
         }
         viewModelScope.launch {
             _state.update { it.copy(isSaving = true) }
-            val existing = rosterEntryDao.getForPair(projectId, clerkId)
-            val entry = (
-                existing ?: RosterEntryEntity(
-                    id = UUID.randomUUID().toString(),
-                    projectId = projectId,
-                    clerkId = clerkId,
-                    dailyRate = rate,
-                )
-                ).copy(dailyRate = rate, removedAt = null)
-            rosterEntryDao.upsert(entry)
+            // Goes through the writer's atomic check-then-write rather than a bare
+            // getForPair + upsert here, so a race can never mint a fresh id for a pair
+            // that already has a row (see ProjectRosterWriter.upsertRosterEntryForPair).
+            writer.upsertRosterEntryForPair(projectId, clerkId, rate)
             _state.update { it.copy(isSaving = false, saveComplete = true) }
         }
     }
@@ -125,8 +122,9 @@ class AddRosterClerkViewModel(
             projectId: String,
             clerkDao: ClerkDao,
             rosterEntryDao: RosterEntryDao,
+            writer: ProjectRosterWriter,
         ): ViewModelProvider.Factory = viewModelFactory {
-            initializer { AddRosterClerkViewModel(projectId, clerkDao, rosterEntryDao) }
+            initializer { AddRosterClerkViewModel(projectId, clerkDao, rosterEntryDao, writer) }
         }
     }
 }

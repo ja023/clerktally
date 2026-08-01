@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,6 +26,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -34,6 +35,7 @@ import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.ui.components.CrewTallyButton
+import com.vague.crewtally.ui.components.CrewTallyConfirmDialog
 import com.vague.crewtally.ui.components.CrewTallyTextField
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.viewmodel.EditRosterRateEvent
@@ -79,7 +81,7 @@ fun EditRosterRateScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(clerkName) },
+                title = { Text(clerkName, modifier = Modifier.semantics { heading() }) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
@@ -95,7 +97,7 @@ fun EditRosterRateScreen(
                 .padding(CrewTallyTheme.dimens.screenEdge),
         ) {
             CrewTallyTextField(
-                label = stringResource(R.string.roster_rate_field_label),
+                label = stringResource(R.string.roster_rate_field_label_for_clerk, clerkName),
                 value = state.rateInput,
                 onValueChange = { viewModel.onEvent(EditRosterRateEvent.RateChanged(it)) },
                 leadingText = CurrencyCodes.symbolFor(currency),
@@ -127,19 +129,17 @@ fun EditRosterRateScreen(
     }
 
     if (showRemoveConfirm) {
-        AlertDialog(
-            onDismissRequest = { showRemoveConfirm = false },
-            title = { Text(stringResource(R.string.roster_remove_confirm_title)) },
-            text = { Text(stringResource(R.string.roster_remove_confirm_body, clerkName)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.onEvent(EditRosterRateEvent.Remove)
-                    showRemoveConfirm = false
-                }) { Text(stringResource(R.string.action_confirm)) }
+        CrewTallyConfirmDialog(
+            title = stringResource(R.string.roster_remove_confirm_title),
+            body = stringResource(R.string.roster_remove_confirm_body, clerkName),
+            confirmLabel = stringResource(R.string.action_confirm),
+            dismissLabel = stringResource(R.string.action_cancel),
+            onConfirm = {
+                viewModel.onEvent(EditRosterRateEvent.Remove)
+                showRemoveConfirm = false
             },
-            dismissButton = {
-                TextButton(onClick = { showRemoveConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
-            },
+            onDismiss = { showRemoveConfirm = false },
+            isDestructive = true,
         )
     }
 }

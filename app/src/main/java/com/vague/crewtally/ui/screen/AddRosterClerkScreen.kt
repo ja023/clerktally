@@ -22,10 +22,15 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,6 +39,7 @@ import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.data.local.ClerkEntity
+import com.vague.crewtally.data.local.RoomProjectRosterWriter
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyListRow
 import com.vague.crewtally.ui.components.CrewTallyTextField
@@ -58,7 +64,12 @@ fun AddRosterClerkScreen(
     val application = LocalContext.current.applicationContext as CrewTallyApplication
     val database = application.database
     val viewModel: AddRosterClerkViewModel = viewModel(
-        factory = AddRosterClerkViewModel.factory(projectId, database.clerkDao(), database.rosterEntryDao()),
+        factory = AddRosterClerkViewModel.factory(
+            projectId,
+            database.clerkDao(),
+            database.rosterEntryDao(),
+            remember { RoomProjectRosterWriter(database) },
+        ),
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val availableClerks by viewModel.availableClerks.collectAsStateWithLifecycle()
@@ -72,10 +83,16 @@ fun AddRosterClerkScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (state.step == AddRosterClerkStep.PICK) {
+                        text = if (state.step == AddRosterClerkStep.PICK) {
                             stringResource(R.string.add_clerk_pick_title)
                         } else {
                             stringResource(R.string.add_clerk_rate_title)
+                        },
+                        // The title is the only signal a step changed — no new screen, no
+                        // nav transition TalkBack would otherwise announce on its own.
+                        modifier = Modifier.semantics {
+                            heading()
+                            liveRegion = LiveRegionMode.Polite
                         },
                     )
                 },
@@ -151,6 +168,7 @@ private fun PickClerkStep(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
         } else {
