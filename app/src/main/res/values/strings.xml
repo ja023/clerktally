@@ -156,4 +156,60 @@
     <string name="roster_remove_clerk">Remove from roster</string>
     <string name="roster_remove_confirm_title">Remove from roster?</string>
     <string name="roster_remove_confirm_body">%1$s will stop appearing on new attendance days. Their rate history on this project is kept.</string>
+
+    <!-- Attendance daily loop (Phase 3) -->
+    <string name="project_take_attendance">Take attendance</string>
+    <string name="attendance_title">Attendance</string>
+    <string name="attendance_prev_day">Previous day</string>
+    <string name="attendance_next_day">Next day</string>
+    <string name="attendance_pick_date">Change date</string>
+    <string name="attendance_date_heading">Date: %1$s</string>
+    <string name="attendance_before_start_warning">This is before the project\'s start date. You can still record attendance for it.</string>
+    <string name="attendance_mark_all_present">Mark all present</string>
+    <plurals name="attendance_unmarked_reminder">
+        <item quantity="one">%d clerk unmarked</item>
+        <item quantity="other">%d clerks unmarked</item>
+    </plurals>
+    <string name="attendance_all_marked">Everyone is marked.</string>
+    <string name="attendance_empty_roster">No one on the roster yet. Add crew to the project, or add a walk-in for this day.</string>
+    <string name="attendance_state_present">Present</string>
+    <string name="attendance_state_absent">Absent</string>
+    <string name="attendance_state_unmarked">Unmarked</string>
+    <string name="attendance_walk_in_tag">Walk-in</string>
+    <string name="attendance_row_state_description">%1$s: %2$s</string>
+    <string name="attendance_extras_action">Extras</string>
+    <string name="attendance_extras_action_with_total">Extras: %1$s</string>
+    <string name="attendance_add_walk_in">Add clerk for this day</string>
+    <string name="attendance_unmark_confirm_title">Remove this day\'s record?</string>
+    <string name="attendance_unmark_confirm_body">%1$s has extras recorded for this day. Clearing their attendance will delete those extras too. This can\'t be undone.</string>
+
+    <!-- Attendance history on project detail (Phase 3) -->
+    <string name="attendance_history_heading">Attendance history</string>
+    <string name="attendance_history_empty">No attendance recorded yet.</string>
+    <string name="attendance_history_present_count">%1$d present</string>
+    <string name="attendance_history_row_description">%1$s. %2$d present. Extras %3$s.</string>
+
+    <!-- Extras editor (Phase 3) -->
+    <string name="extras_title">Extras - %1$s</string>
+    <string name="extras_preset_lunch">Lunch</string>
+    <string name="extras_preset_transport">Transport</string>
+    <string name="extras_preset_bonus">Bonus</string>
+    <string name="extras_preset_custom">Custom</string>
+    <string name="extras_custom_label">Label</string>
+    <string name="extras_custom_label_error">Enter a label</string>
+    <string name="extras_amount_label">Amount</string>
+    <string name="extras_amount_error">Enter an amount</string>
+    <string name="extras_deduction_toggle">Deduction (subtract this amount)</string>
+    <string name="extras_add_line">Add extra</string>
+    <string name="extras_lines_heading">This day\'s extras</string>
+    <string name="extras_empty">No extras for this day yet.</string>
+    <string name="extras_total">Total</string>
+    <string name="extras_delete_line">Delete extra</string>
+    <string name="extras_line_description">%1$s, %2$s</string>
+
+    <!-- Walk-in (Phase 3) -->
+    <string name="walk_in_pick_title">Add clerk for this day</string>
+    <string name="walk_in_rate_title">Set daily rate</string>
+    <string name="walk_in_none_available">Every active clerk is already on this day.</string>
+    <string name="walk_in_also_add_to_roster">Also add to project roster</string>
 </resources>

@@ -19,6 +19,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,9 +41,11 @@ import com.vague.crewtally.R
 import com.vague.crewtally.data.local.ProjectStatus
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyConfirmDialog
+import com.vague.crewtally.ui.screen.attendance.AttendanceRoutes
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.viewmodel.ProjectDetailViewModel
 import com.vague.crewtally.util.CurrencyCodes
+import java.time.LocalDate
 
 /**
  * View-first project detail: read-only details + roster, with edit/status/roster actions
@@ -59,11 +62,13 @@ fun ProjectDetailScreen(projectId: String, navController: NavController, modifie
             database.projectDao(),
             database.companyDao(),
             database.rosterEntryDao(),
+            database.attendanceEntryDao(),
         ),
     )
     val project by viewModel.project.collectAsStateWithLifecycle()
     val companyName by viewModel.companyName.collectAsStateWithLifecycle()
     val roster by viewModel.roster.collectAsStateWithLifecycle()
+    val attendanceDays by viewModel.attendanceDays.collectAsStateWithLifecycle()
 
     var showMarkCompletedConfirm by remember { mutableStateOf(false) }
     var showReopenConfirm by remember { mutableStateOf(false) }
@@ -106,21 +111,17 @@ fun ProjectDetailScreen(projectId: String, navController: NavController, modifie
                 ProjectDetailInfoSection(project = currentProject, companyName = companyName)
                 Spacer(Modifier.height(CrewTallyTheme.dimens.sectionGap))
 
-                when (currentProject.status) {
-                    ProjectStatus.ACTIVE -> CrewTallyButton(
-                        text = stringResource(R.string.project_mark_completed),
-                        onClick = { showMarkCompletedConfirm = true },
+                // The daily primary action. Attendance is only taken on active projects.
+                if (currentProject.status == ProjectStatus.ACTIVE) {
+                    CrewTallyButton(
+                        text = stringResource(R.string.project_take_attendance),
+                        onClick = {
+                            navController.navigate(AttendanceRoutes.day(projectId, LocalDate.now()))
+                        },
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    ProjectStatus.COMPLETED -> CrewTallyButton(
-                        text = stringResource(R.string.project_reopen),
-                        onClick = { showReopenConfirm = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    ProjectStatus.ARCHIVED -> Unit
+                    Spacer(Modifier.height(CrewTallyTheme.dimens.sectionGap))
                 }
-
-                Spacer(Modifier.height(CrewTallyTheme.dimens.sectionGap))
 
                 ProjectRosterSection(
                     roster = roster,
@@ -138,6 +139,28 @@ fun ProjectDetailScreen(projectId: String, navController: NavController, modifie
                         )
                     },
                 )
+
+                Spacer(Modifier.height(CrewTallyTheme.dimens.sectionGap))
+
+                AttendanceHistorySection(
+                    days = attendanceDays,
+                    currencySymbol = CurrencyCodes.symbolFor(currentProject.currency),
+                    onDayClick = { day -> navController.navigate(AttendanceRoutes.day(projectId, day)) },
+                )
+
+                Spacer(Modifier.height(CrewTallyTheme.dimens.sectionGap))
+
+                // Status change is a secondary action (de-emphasized) so "Take attendance"
+                // stays the screen's single primary action for active projects.
+                when (currentProject.status) {
+                    ProjectStatus.ACTIVE -> TextButton(onClick = { showMarkCompletedConfirm = true }) {
+                        Text(stringResource(R.string.project_mark_completed))
+                    }
+                    ProjectStatus.COMPLETED -> TextButton(onClick = { showReopenConfirm = true }) {
+                        Text(stringResource(R.string.project_reopen))
+                    }
+                    ProjectStatus.ARCHIVED -> Unit
+                }
             }
         }
 

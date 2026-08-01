@@ -31,11 +31,16 @@ import com.vague.crewtally.ui.screen.MoreScreen
 import com.vague.crewtally.ui.screen.PlaceholderScreen
 import com.vague.crewtally.ui.screen.ProjectDetailScreen
 import com.vague.crewtally.ui.screen.ProjectsScreen
+import com.vague.crewtally.ui.screen.attendance.AttendanceDayScreen
+import com.vague.crewtally.ui.screen.attendance.AttendanceExtrasScreen
+import com.vague.crewtally.ui.screen.attendance.AttendanceRoutes
+import com.vague.crewtally.ui.screen.attendance.AttendanceWalkInScreen
 import com.vague.crewtally.ui.screen.clerk.ClerkFormScreen
 import com.vague.crewtally.ui.screen.clerk.ClerkListScreen
 import com.vague.crewtally.ui.screen.company.CompanyFormScreen
 import com.vague.crewtally.ui.screen.company.CompanyListScreen
 import com.vague.crewtally.ui.theme.CrewTallyTheme
+import java.time.LocalDate
 
 /** Route templates for the Phase 1 add/edit forms, nested under Clerks and More. */
 private object CrewTallyRoutes {
@@ -209,6 +214,60 @@ fun CrewTallyNavHost() {
                     clerkName = arguments?.getString("clerkName").orEmpty(),
                     rateMinorUnits = arguments?.getLong("rate") ?: 0L,
                     currency = arguments?.getString("currency").orEmpty(),
+                    navController = navController,
+                )
+            }
+
+            // --- Phase 3: Attendance daily loop --------------------------------------
+            composable(
+                route = AttendanceRoutes.DAY_TEMPLATE,
+                arguments = listOf(
+                    navArgument(AttendanceRoutes.PROJECT_ID) { type = NavType.StringType },
+                    navArgument(AttendanceRoutes.EPOCH_DAY) { type = NavType.LongType },
+                ),
+            ) { backStackEntry ->
+                val arguments = backStackEntry.arguments
+                AttendanceDayScreen(
+                    projectId = arguments?.getString(AttendanceRoutes.PROJECT_ID).orEmpty(),
+                    initialDate = LocalDate.ofEpochDay(arguments?.getLong(AttendanceRoutes.EPOCH_DAY) ?: 0L),
+                    navController = navController,
+                )
+            }
+            composable(
+                route = AttendanceRoutes.EXTRAS_TEMPLATE,
+                arguments = listOf(
+                    navArgument(AttendanceRoutes.PROJECT_ID) { type = NavType.StringType },
+                    navArgument(AttendanceRoutes.EPOCH_DAY) { type = NavType.LongType },
+                    navArgument(AttendanceRoutes.CLERK_ID) { type = NavType.StringType },
+                    navArgument(AttendanceRoutes.CLERK_NAME) { type = NavType.StringType },
+                    navArgument(AttendanceRoutes.RATE) { type = NavType.LongType },
+                    navArgument(AttendanceRoutes.CURRENCY) { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val arguments = backStackEntry.arguments
+                AttendanceExtrasScreen(
+                    projectId = arguments?.getString(AttendanceRoutes.PROJECT_ID).orEmpty(),
+                    clerkId = arguments?.getString(AttendanceRoutes.CLERK_ID).orEmpty(),
+                    date = LocalDate.ofEpochDay(arguments?.getLong(AttendanceRoutes.EPOCH_DAY) ?: 0L),
+                    clerkName = arguments?.getString(AttendanceRoutes.CLERK_NAME).orEmpty(),
+                    rateMinorUnits = arguments?.getLong(AttendanceRoutes.RATE) ?: 0L,
+                    currency = arguments?.getString(AttendanceRoutes.CURRENCY).orEmpty(),
+                    navController = navController,
+                )
+            }
+            composable(
+                route = AttendanceRoutes.WALK_IN_TEMPLATE,
+                arguments = listOf(
+                    navArgument(AttendanceRoutes.PROJECT_ID) { type = NavType.StringType },
+                    navArgument(AttendanceRoutes.EPOCH_DAY) { type = NavType.LongType },
+                    navArgument(AttendanceRoutes.CURRENCY) { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val arguments = backStackEntry.arguments
+                AttendanceWalkInScreen(
+                    projectId = arguments?.getString(AttendanceRoutes.PROJECT_ID).orEmpty(),
+                    date = LocalDate.ofEpochDay(arguments?.getLong(AttendanceRoutes.EPOCH_DAY) ?: 0L),
+                    currency = arguments?.getString(AttendanceRoutes.CURRENCY).orEmpty(),
                     navController = navController,
                 )
             }

@@ -65,4 +65,16 @@ object Money {
     /** Formats minor units with a leading currency symbol/code for display, e.g. "$45.50". */
     fun formatWithSymbol(minorUnits: Long, symbol: String): String =
         "$symbol${formatForInput(minorUnits)}"
+
+    /**
+     * Formats a SIGNED amount with the sign OUTSIDE the currency symbol, e.g. -1550 -> "-$15.50"
+     * and 1550 -> "$15.50". Extra-pay lines and their totals may be negative (deductions), and
+     * [formatForInput]'s `%d.%02d` split would render a negative as "-15.-50"; this pulls the
+     * sign out and formats the magnitude, so a deduction reads cleanly.
+     */
+    fun formatSignedWithSymbol(minorUnits: Long, symbol: String): String {
+        val sign = if (minorUnits < 0) "-" else ""
+        val magnitude = if (minorUnits == Long.MIN_VALUE) minorUnits else kotlin.math.abs(minorUnits)
+        return "$sign$symbol${formatForInput(magnitude)}"
+    }
 }

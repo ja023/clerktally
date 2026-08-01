@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.vague.crewtally.data.local.AttendanceDaySummary
+import com.vague.crewtally.data.local.AttendanceEntryDao
 import com.vague.crewtally.data.local.CompanyDao
 import com.vague.crewtally.data.local.ProjectDao
 import com.vague.crewtally.data.local.ProjectEntity
@@ -37,10 +39,16 @@ class ProjectDetailViewModel(
     private val projectDao: ProjectDao,
     companyDao: CompanyDao,
     private val rosterEntryDao: RosterEntryDao,
+    attendanceEntryDao: AttendanceEntryDao,
 ) : ViewModel() {
 
     val project: StateFlow<ProjectEntity?> = projectDao.observeById(projectId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
+
+    /** Per-day attendance summaries for the history section, newest first (DAO-sorted). */
+    val attendanceDays: StateFlow<List<AttendanceDaySummary>> =
+        attendanceEntryDao.observeDaySummaries(projectId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     val companyName: StateFlow<String> = project
         .flatMapLatest { current ->
@@ -78,8 +86,11 @@ class ProjectDetailViewModel(
             projectDao: ProjectDao,
             companyDao: CompanyDao,
             rosterEntryDao: RosterEntryDao,
+            attendanceEntryDao: AttendanceEntryDao,
         ): ViewModelProvider.Factory = viewModelFactory {
-            initializer { ProjectDetailViewModel(projectId, projectDao, companyDao, rosterEntryDao) }
+            initializer {
+                ProjectDetailViewModel(projectId, projectDao, companyDao, rosterEntryDao, attendanceEntryDao)
+            }
         }
     }
 }
