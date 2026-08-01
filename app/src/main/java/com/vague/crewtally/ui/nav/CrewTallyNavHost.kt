@@ -17,13 +17,31 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.vague.crewtally.ui.screen.MoreScreen
 import com.vague.crewtally.ui.screen.PlaceholderScreen
+import com.vague.crewtally.ui.screen.clerk.ClerkFormScreen
+import com.vague.crewtally.ui.screen.clerk.ClerkListScreen
+import com.vague.crewtally.ui.screen.company.CompanyFormScreen
+import com.vague.crewtally.ui.screen.company.CompanyListScreen
 import com.vague.crewtally.ui.theme.CrewTallyTheme
+
+/** Route templates for the Phase 1 add/edit forms, nested under Clerks and More. */
+private object CrewTallyRoutes {
+    const val CLERK_NEW = "clerks/new"
+    const val CLERK_EDIT = "clerks/{clerkId}/edit"
+    const val CLERK_ID_ARG = "clerkId"
+
+    const val COMPANIES = "companies"
+    const val COMPANY_NEW = "companies/new"
+    const val COMPANY_EDIT = "companies/{companyId}/edit"
+    const val COMPANY_ID_ARG = "companyId"
+}
 
 /**
  * The app shell: a bottom navigation bar over a [NavHost]. The four destinations are
@@ -102,10 +120,39 @@ fun CrewTallyNavHost() {
                 PlaceholderScreen(title = stringResource(CrewTallyDestination.Projects.labelRes))
             }
             composable(CrewTallyDestination.Clerks.route) {
-                PlaceholderScreen(title = stringResource(CrewTallyDestination.Clerks.labelRes))
+                ClerkListScreen(
+                    onAddClerk = { navController.navigate(CrewTallyRoutes.CLERK_NEW) },
+                    onEditClerk = { clerkId -> navController.navigate("clerks/$clerkId/edit") },
+                )
+            }
+            composable(CrewTallyRoutes.CLERK_NEW) {
+                ClerkFormScreen(clerkId = null, onDone = { navController.popBackStack() })
+            }
+            composable(
+                route = CrewTallyRoutes.CLERK_EDIT,
+                arguments = listOf(navArgument(CrewTallyRoutes.CLERK_ID_ARG) { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val clerkId = backStackEntry.arguments?.getString(CrewTallyRoutes.CLERK_ID_ARG)
+                ClerkFormScreen(clerkId = clerkId, onDone = { navController.popBackStack() })
             }
             composable(CrewTallyDestination.More.route) {
-                MoreScreen()
+                MoreScreen(onCompaniesClick = { navController.navigate(CrewTallyRoutes.COMPANIES) })
+            }
+            composable(CrewTallyRoutes.COMPANIES) {
+                CompanyListScreen(
+                    onAddCompany = { navController.navigate(CrewTallyRoutes.COMPANY_NEW) },
+                    onEditCompany = { companyId -> navController.navigate("companies/$companyId/edit") },
+                )
+            }
+            composable(CrewTallyRoutes.COMPANY_NEW) {
+                CompanyFormScreen(companyId = null, onDone = { navController.popBackStack() })
+            }
+            composable(
+                route = CrewTallyRoutes.COMPANY_EDIT,
+                arguments = listOf(navArgument(CrewTallyRoutes.COMPANY_ID_ARG) { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val companyId = backStackEntry.arguments?.getString(CrewTallyRoutes.COMPANY_ID_ARG)
+                CompanyFormScreen(companyId = companyId, onDone = { navController.popBackStack() })
             }
         }
     }

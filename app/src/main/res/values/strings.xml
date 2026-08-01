@@ -22,4 +22,58 @@
     <string name="cd_nav_projects">Projects tab</string>
     <string name="cd_nav_clerks">Clerks tab</string>
     <string name="cd_nav_more">More tab</string>
+
+    <!-- Shared form field labels (clerks + companies) -->
+    <string name="field_name">Name</string>
+    <string name="field_phone">Phone</string>
+    <string name="field_notes">Notes</string>
+    <string name="field_contact_person">Contact person</string>
+    <string name="field_name_search_placeholder">Search device contacts or type a name</string>
+    <string name="error_name_required">Name is required</string>
+
+    <!-- Shared list-screen chrome -->
+    <string name="action_search">Search</string>
+    <string name="action_show_archived">Show archived</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_archive">Archive</string>
+    <string name="action_unarchive">Unarchive</string>
+    <string name="action_delete">Delete</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_contact_suggestion">%1$s, %2$s</string>
+    <string name="cd_archived_record">%1$s, archived</string>
+
+    <!-- Clerks list -->
+    <string name="clerks_search_placeholder">Search clerks by name or phone</string>
+    <string name="clerks_empty_title">No clerks yet</string>
+    <string name="clerks_empty_body">Add your first clerk to start building your crew.</string>
+    <string name="clerks_add_clerk">Add clerk</string>
+    <string name="clerks_no_matches">No clerks match your search.</string>
+    <string name="clerks_archived_section">Archived clerks</string>
+
+    <!-- Clerk form -->
+    <string name="clerk_form_title_new">New clerk</string>
+    <string name="clerk_form_title_edit">Edit clerk</string>
+    <string name="clerk_archive_confirm_title">Archive this clerk?</string>
+    <string name="clerk_archive_confirm_body">They\'ll be hidden from your active clerk list, but their roster, attendance, and payment history stays intact. You can unarchive them anytime.</string>
+    <string name="clerk_unarchive_confirm_title">Unarchive this clerk?</string>
+    <string name="clerk_unarchive_confirm_body">They\'ll reappear in your active clerk list, ready to roster onto projects again.</string>
+    <string name="clerk_delete_confirm_title">Delete this clerk?</string>
+    <string name="clerk_delete_confirm_body">This clerk has no roster, attendance, or payment history, so this can\'t be undone. If you\'re not sure, archive instead.</string>
+
+    <!-- Companies list -->
+    <string name="companies_empty_title">No companies yet</string>
+    <string name="companies_empty_body">Add the company you\'re running projects for.</string>
+    <string name="companies_add_company">Add company</string>
+    <string name="companies_archived_section">Archived companies</string>
+
+    <!-- Company form -->
+    <string name="company_form_title_new">New company</string>
+    <string name="company_form_title_edit">Edit company</string>
+    <string name="company_archive_confirm_title">Archive this company?</string>
+    <string name="company_archive_confirm_body">It\'ll be hidden from your active company list, but its projects and history stay intact. You can unarchive it anytime.</string>
+    <string name="company_unarchive_confirm_title">Unarchive this company?</string>
+    <string name="company_unarchive_confirm_body">It\'ll reappear in your active company list, ready for new projects again.</string>
+    <string name="company_delete_confirm_title">Delete this company?</string>
+    <string name="company_delete_confirm_body">This company has no projects on record, so this can\'t be undone. If you\'re not sure, archive instead.</string>
 </resources>

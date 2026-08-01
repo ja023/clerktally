@@ -88,6 +88,7 @@ dependencies {
 
     // Test (JVM unit — headless)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 
     // Test (instrumented — needs a device/emulator)
     androidTestImplementation(libs.androidx.junit)

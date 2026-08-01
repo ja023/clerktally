@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- CrewTally is offline-only: it declares NO permissions at all.
-         In particular there is NO android.permission.INTERNET — the app makes no
-         network requests and the Play data-safety declaration is "no data collected,
-         no data shared". A future library that tries to add INTERNET via manifest
-         merge should be caught in review, not merged silently. -->
+    <!-- CrewTally is offline-only and still declares NO network permission —
+         in particular NO android.permission.INTERNET. A future library that tries to
+         add it via manifest merge should be caught in review, not merged silently.
+
+         READ_CONTACTS (Phase 1) backs the shared contact-search field (clerk name/phone,
+         company contact person/phone). It is requested at runtime on first use of that
+         field, once, and the app works as a plain form forever if denied — see
+         ContactsPermissionStore / ContactSearchField. Declaring it here has no effect on
+         its own; Android still gates the read behind the runtime grant. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <application
         android:name=".CrewTallyApplication"

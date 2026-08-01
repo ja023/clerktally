@@ -26,4 +26,8 @@ interface PaymentDao {
 
     @Query("SELECT * FROM payments WHERE clerkId = :clerkId ORDER BY date DESC")
     fun observeByClerk(clerkId: String): Flow<List<PaymentEntity>>
+
+    /** Used by the clerk delete-eligibility check (Phase 1): a payment row is history. */
+    @Query("SELECT COUNT(*) FROM payments WHERE clerkId = :clerkId")
+    suspend fun countByClerk(clerkId: String): Int
 }

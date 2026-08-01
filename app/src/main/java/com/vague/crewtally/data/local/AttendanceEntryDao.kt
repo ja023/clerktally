@@ -25,4 +25,8 @@ interface AttendanceEntryDao {
 
     @Query("SELECT * FROM attendance_entries WHERE id = :id")
     suspend fun getById(id: String): AttendanceEntryEntity?
+
+    /** Used by the clerk delete-eligibility check (Phase 1): an attendance row is history. */
+    @Query("SELECT COUNT(*) FROM attendance_entries WHERE clerkId = :clerkId")
+    suspend fun countByClerk(clerkId: String): Int
 }

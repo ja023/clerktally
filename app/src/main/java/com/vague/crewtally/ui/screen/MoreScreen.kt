@@ -15,18 +15,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import com.vague.crewtally.R
 import com.vague.crewtally.ui.components.CrewTallyListRow
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 
 /**
- * The "More" hub. In Phase 0 it lists its three future sections — Companies, Backup,
- * Settings — as clearly DISABLED rows (no onClick), each with a hint that it arrives in a
- * later update. This keeps the shallow navigation honest: the user can see everything the
- * app will hold without any of it pretending to work yet.
+ * The "More" hub. Companies (Phase 1) is now a live row that navigates to the companies
+ * list; Backup and Settings stay clearly DISABLED (no onClick) with a hint that they arrive
+ * in a later update. This keeps the shallow navigation honest: the user can see everything
+ * the app will hold without any of it pretending to work before its phase lands.
  */
 @Composable
-fun MoreScreen(modifier: Modifier = Modifier) {
+fun MoreScreen(onCompaniesClick: () -> Unit, modifier: Modifier = Modifier) {
     val disabledHint = stringResource(R.string.more_row_disabled_hint)
 
     Column(
@@ -43,6 +45,7 @@ fun MoreScreen(modifier: Modifier = Modifier) {
             text = stringResource(R.string.nav_more),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.semantics { heading() },
         )
 
         val companies = stringResource(R.string.more_companies)
@@ -51,11 +54,9 @@ fun MoreScreen(modifier: Modifier = Modifier) {
 
         CrewTallyListRow(
             title = companies,
-            subtitle = disabledHint,
             leadingIcon = Icons.Filled.Business,
-            onClick = null,
-            enabled = false,
-            contentDescription = "$companies. $disabledHint",
+            onClick = onCompaniesClick,
+            contentDescription = companies,
         )
         CrewTallyListRow(
             title = backup,

@@ -85,6 +85,24 @@ Fable orchestrates; sub-decisions inside each phase still go to Jad as MCQs befo
 - Room v1 is **amendable until the first APK is installed on the phone** (no real data exists). Company entity gains contactPerson/phone as part of Phase 1; regenerate schemas/1.json, do NOT add v2 yet.
 - Checkpoint flow: commit per phase; first phone install happens at END of Phase 1.
 
+## Phase 2 LOCKED decisions (2026-08-01)
+
+- **Project form**: name + company + currency required; location + notes optional; startDate auto = today (editable). NO end-date field — a project ends via an explicit "Mark completed" action (sets endDate = that day, status = completed). Currency defaults to last used (locked decision #2).
+- **Projects tab**: segmented Active / Completed (one big segmented control, senior-friendly). Project rows show name, company, and roster size. Archived projects out of scope until needed.
+- **Roster at creation**: step 1 multi-select clerks (searchable list); step 2 a rate list — every chosen clerk with a big numeric rate field pre-filled from their most recent RosterEntry rate anywhere (editable). Blank rates block save.
+- **Roster after creation — fully editable anytime**: add clerk (asks rate, pre-filled from last job), edit a clerk's rate (affects FUTURE attendance days only; past days keep rateSnapshot), remove clerk (history intact, they stop appearing on new days; roster row soft-removed, not deleted, since it may carry the rate history).
+- ProjectEntity gains a notes field if missing — still schema v1 (amendable until first install).
+
+## Review debt (accepted findings, deliberately deferred — address in the phase noted)
+
+- **Extract shared `RecordLifecycleActions` composable** (archive/unarchive/delete buttons + 3 confirm dialogs, ~70 lines duplicated between ClerkFormScreen and CompanyFormScreen) — do this in Phase 3 BEFORE a third form copies the pattern.
+- **Contact-search tests**: ContactsSearcher LIKE-escaping, union+dedupe, ContactsPermissionStore ask-once — needs Robolectric; add when a Robolectric setup exists (Phase 5/6).
+- **IME action chaining** Name→Phone→Notes→Save in forms (Phase 6 polish).
+- **Nav route builders** instead of literal `"clerks/$id/edit"` templates (whenever nav is next touched).
+- **Permission re-check on resume** in ContactSearchField (granted via system Settings while form open) — only if it shows up in real use.
+- **Disabled More-rows** need a visual (not just semantic) disabled treatment (Phase 5 when Backup/Settings go live anyway).
+- ⚠️ **Type.kt `labelMedium`/`labelSmall` are 14sp** — currently unused for body content; never reach for them for anything a user must read (locked ≥16sp rule).
+
 ## Deferred / v2 candidates
 
 - Optional biometric/PIN app lock · project cost summary screen · Arabic + RTL ·

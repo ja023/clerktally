@@ -26,4 +26,8 @@ interface RosterEntryDao {
         "SELECT * FROM roster_entries WHERE projectId = :projectId AND clerkId = :clerkId LIMIT 1",
     )
     suspend fun getForPair(projectId: String, clerkId: String): RosterEntryEntity?
+
+    /** Used by the clerk delete-eligibility check (Phase 1): a roster row is history. */
+    @Query("SELECT COUNT(*) FROM roster_entries WHERE clerkId = :clerkId")
+    suspend fun countByClerk(clerkId: String): Int
 }

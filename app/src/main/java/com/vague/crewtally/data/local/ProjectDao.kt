@@ -27,4 +27,8 @@ interface ProjectDao {
 
     @Query("SELECT * FROM projects WHERE id = :id")
     suspend fun getById(id: String): ProjectEntity?
+
+    /** Used by the company delete-eligibility check (Phase 1): a project row is history. */
+    @Query("SELECT COUNT(*) FROM projects WHERE companyId = :companyId")
+    suspend fun countByCompany(companyId: String): Int
 }

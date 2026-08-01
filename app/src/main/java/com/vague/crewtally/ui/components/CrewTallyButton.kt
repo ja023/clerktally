@@ -13,8 +13,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.vague.crewtally.ui.theme.CrewTallyShape
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 
@@ -52,7 +52,7 @@ fun CrewTallyButton(
         ),
         modifier = modifier
             .heightIn(min = CrewTallyTheme.dimens.primaryTarget)
-            .clearAndSetSemantics { this.contentDescription = contentDescription },
+            .semantics(mergeDescendants = true) { this.contentDescription = contentDescription },
     ) {
         if (leadingIcon != null) {
             Icon(
@@ -62,6 +62,6 @@ fun CrewTallyButton(
             )
             Spacer(Modifier.width(CrewTallyTheme.dimens.spaceSm))
         }
-        Text(text = text, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+        Text(text = text, style = MaterialTheme.typography.labelLarge)
     }
 }
