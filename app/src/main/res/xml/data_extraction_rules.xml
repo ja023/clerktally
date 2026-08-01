@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CrewTally keeps all data on-device and offers manual export/import (see the Backup
+     phase). Disable OS cloud backup and device-to-device transfer so crew and payment
+     data is never copied off the device by the platform. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+    </device-transfer>
+</data-extraction-rules>

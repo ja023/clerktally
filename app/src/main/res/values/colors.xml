@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher-icon colors only. All in-app color lives in ui/theme/Color.kt. -->
+    <color name="ic_launcher_background">#1F4E79</color>
+    <color name="window_background_light">#FBFBFD</color>
+</resources>

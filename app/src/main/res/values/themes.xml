@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base launch/window theme. Compose owns all in-app styling (including dark mode);
+         this only controls the window background + system bars for the brief moment before
+         Compose draws. A plain platform theme is used so it resolves on every supported API
+         (the DayNight DeviceDefault variants do not exist at minSdk 26). -->
+    <style name="Theme.CrewTally" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background_light</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>
