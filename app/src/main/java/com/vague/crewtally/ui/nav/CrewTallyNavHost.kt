@@ -17,12 +17,20 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.vague.crewtally.ui.screen.AddRosterClerkScreen
+import com.vague.crewtally.ui.screen.CreateProjectScreen
+import com.vague.crewtally.ui.screen.EditProjectScreen
+import com.vague.crewtally.ui.screen.EditRosterRateScreen
 import com.vague.crewtally.ui.screen.MoreScreen
 import com.vague.crewtally.ui.screen.PlaceholderScreen
+import com.vague.crewtally.ui.screen.ProjectDetailScreen
+import com.vague.crewtally.ui.screen.ProjectsScreen
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 
 /**
@@ -99,13 +107,65 @@ fun CrewTallyNavHost() {
                 PlaceholderScreen(title = stringResource(CrewTallyDestination.Home.labelRes))
             }
             composable(CrewTallyDestination.Projects.route) {
-                PlaceholderScreen(title = stringResource(CrewTallyDestination.Projects.labelRes))
+                ProjectsScreen(navController = navController)
             }
             composable(CrewTallyDestination.Clerks.route) {
                 PlaceholderScreen(title = stringResource(CrewTallyDestination.Clerks.labelRes))
             }
             composable(CrewTallyDestination.More.route) {
                 MoreScreen()
+            }
+
+            // --- Phase 2: Projects + roster ------------------------------------------
+            composable("project/create") {
+                CreateProjectScreen(navController = navController)
+            }
+            composable(
+                route = "project/{projectId}",
+                arguments = listOf(navArgument("projectId") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val projectId = backStackEntry.arguments?.getString("projectId").orEmpty()
+                ProjectDetailScreen(projectId = projectId, navController = navController)
+            }
+            composable(
+                route = "project/{projectId}/edit",
+                arguments = listOf(navArgument("projectId") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val projectId = backStackEntry.arguments?.getString("projectId").orEmpty()
+                EditProjectScreen(projectId = projectId, navController = navController)
+            }
+            composable(
+                route = "project/{projectId}/roster/add/{currency}",
+                arguments = listOf(
+                    navArgument("projectId") { type = NavType.StringType },
+                    navArgument("currency") { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val projectId = backStackEntry.arguments?.getString("projectId").orEmpty()
+                val currency = backStackEntry.arguments?.getString("currency").orEmpty()
+                AddRosterClerkScreen(projectId = projectId, currency = currency, navController = navController)
+            }
+            composable(
+                route = "project/{projectId}/roster/{rosterEntryId}/edit/{clerkId}/{clerkName}/{rate}/{currency}",
+                arguments = listOf(
+                    navArgument("projectId") { type = NavType.StringType },
+                    navArgument("rosterEntryId") { type = NavType.StringType },
+                    navArgument("clerkId") { type = NavType.StringType },
+                    navArgument("clerkName") { type = NavType.StringType },
+                    navArgument("rate") { type = NavType.LongType },
+                    navArgument("currency") { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val arguments = backStackEntry.arguments
+                EditRosterRateScreen(
+                    rosterEntryId = arguments?.getString("rosterEntryId").orEmpty(),
+                    projectId = arguments?.getString("projectId").orEmpty(),
+                    clerkId = arguments?.getString("clerkId").orEmpty(),
+                    clerkName = arguments?.getString("clerkName").orEmpty(),
+                    rateMinorUnits = arguments?.getLong("rate") ?: 0L,
+                    currency = arguments?.getString("currency").orEmpty(),
+                    navController = navController,
+                )
             }
         }
     }

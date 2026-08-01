@@ -11,6 +11,7 @@ composeBom = "2024.12.01"
 navigationCompose = "2.8.5"
 
 kotlinxSerialization = "1.7.3"
+kotlinxCoroutines = "1.10.2"
 room = "2.8.4"
 
 # Test
@@ -40,6 +41,7 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 
 # Data / serialization
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }

@@ -22,4 +22,83 @@
     <string name="cd_nav_projects">Projects tab</string>
     <string name="cd_nav_clerks">Clerks tab</string>
     <string name="cd_nav_more">More tab</string>
+    <string name="cd_back">Back</string>
+
+    <!-- Generic actions -->
+    <string name="action_next">Next</string>
+    <string name="action_save">Save</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_ok">OK</string>
+    <string name="action_edit">Edit</string>
+
+    <!-- Projects tab (Phase 2) -->
+    <string name="projects_segment_active">Active</string>
+    <string name="projects_segment_completed">Completed</string>
+    <string name="projects_add">Add project</string>
+    <string name="projects_empty_active">No active projects yet.</string>
+    <string name="projects_empty_completed">No completed projects yet.</string>
+    <string name="projects_empty_cta">Add your first project</string>
+    <plurals name="roster_size">
+        <item quantity="one">%d crew member</item>
+        <item quantity="other">%d crew members</item>
+    </plurals>
+
+    <!-- Create-project wizard (Phase 2) -->
+    <string name="create_project_step_details_title">New project</string>
+    <string name="create_project_step_roster_title">Choose crew</string>
+    <string name="create_project_step_rates_title">Set daily rates</string>
+    <string name="action_save_project">Save project</string>
+
+    <!-- Project details form fields — shared by create and edit (Phase 2) -->
+    <string name="project_field_name">Project name</string>
+    <string name="project_error_name_required">Enter a project name</string>
+    <string name="project_field_company">Company</string>
+    <string name="project_error_company_required">Choose a company</string>
+    <string name="project_no_companies_notice">No companies yet. Add one under More before creating a project.</string>
+    <string name="project_field_currency">Currency</string>
+    <string name="project_error_currency_required">Choose or enter a currency code</string>
+    <string name="project_currency_hint">Pick a common code, or type any ISO currency code</string>
+    <string name="project_field_start_date">Start date</string>
+    <string name="project_field_location">Location</string>
+    <string name="project_field_notes">Notes</string>
+
+    <!-- Roster selection + rates (Phase 2) -->
+    <string name="roster_search_label">Search crew by name</string>
+    <string name="roster_no_clerks">No active crew yet. You can add crew to this project later.</string>
+    <string name="rates_no_clerks_notice">No crew added yet — you can add them to the roster after the project is created.</string>
+    <string name="rates_error_required">Enter a daily rate</string>
+    <plurals name="roster_selected_count">
+        <item quantity="zero">No crew selected</item>
+        <item quantity="one">%d crew member selected</item>
+        <item quantity="other">%d crew members selected</item>
+    </plurals>
+
+    <!-- Project detail screen (Phase 2) -->
+    <string name="project_mark_completed">Mark completed</string>
+    <string name="project_mark_completed_confirm_title">Mark this project completed?</string>
+    <string name="project_mark_completed_confirm_body">Its end date will be set to today. You can reopen it later if needed.</string>
+    <string name="project_reopen">Reopen project</string>
+    <string name="project_reopen_confirm_title">Reopen this project?</string>
+    <string name="project_reopen_confirm_body">It will move back to Active and its end date will be cleared.</string>
+    <string name="project_detail_start_date">Start date</string>
+    <string name="project_detail_end_date">End date</string>
+    <string name="project_detail_status">Status</string>
+    <string name="project_status_active">Active</string>
+    <string name="project_status_completed">Completed</string>
+    <string name="project_status_archived">Archived</string>
+    <string name="edit_project_title">Edit project</string>
+
+    <!-- Roster management (Phase 2) -->
+    <string name="project_roster_heading">Roster</string>
+    <string name="project_roster_add_clerk">Add clerk</string>
+    <string name="project_roster_empty">No one on the roster yet. Add a clerk to get started.</string>
+    <string name="add_clerk_pick_title">Add clerk</string>
+    <string name="add_clerk_rate_title">Set daily rate</string>
+    <string name="add_clerk_none_available">Every active clerk is already on this roster.</string>
+    <string name="roster_rate_field_label">Daily rate</string>
+    <string name="roster_rate_edit_hint">Changing this only affects future attendance days — past days keep the rate they were recorded at.</string>
+    <string name="roster_remove_clerk">Remove from roster</string>
+    <string name="roster_remove_confirm_title">Remove from roster?</string>
+    <string name="roster_remove_confirm_body">%1$s will stop appearing on new attendance days. Their rate history on this project is kept.</string>
 </resources>
