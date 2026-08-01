@@ -39,7 +39,6 @@ import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.data.local.ClerkEntity
 import com.vague.crewtally.data.local.RoomAttendanceWriter
-import com.vague.crewtally.data.local.RoomProjectRosterWriter
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyCheckboxRow
 import com.vague.crewtally.ui.components.CrewTallyListRow
@@ -75,7 +74,6 @@ fun AttendanceWalkInScreen(
             rosterEntryDao = database.rosterEntryDao(),
             attendanceEntryDao = database.attendanceEntryDao(),
             attendanceWriter = RoomAttendanceWriter(database),
-            rosterWriter = RoomProjectRosterWriter(database),
         ),
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -131,7 +129,7 @@ fun AttendanceWalkInScreen(
                 verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceLg),
             ) {
                 CrewTallyTextField(
-                    label = state.selectedClerkName,
+                    label = stringResource(R.string.roster_rate_field_label_for_clerk, state.selectedClerkName),
                     value = state.rateInput,
                     onValueChange = { viewModel.onEvent(AttendanceWalkInEvent.RateChanged(it)) },
                     leadingText = CurrencyCodes.symbolFor(currency),

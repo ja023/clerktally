@@ -50,6 +50,9 @@ class FakeRosterEntryDao : RosterEntryDao {
     override suspend fun getMostRecentRateForClerk(clerkId: String): Long? =
         entries.lastOrNull { it.clerkId == clerkId }?.dailyRate
 
+    override suspend fun getActiveDailyRate(projectId: String, clerkId: String): Long? =
+        entries.find { it.projectId == projectId && it.clerkId == clerkId && it.removedAt == null }?.dailyRate
+
     fun setClerkName(clerkId: String, name: String) {
         clerkNames[clerkId] = name
     }

@@ -79,6 +79,8 @@ fun AttendanceDayScreen(
     val project by viewModel.project.collectAsStateWithLifecycle()
     val unmarkedCount by viewModel.unmarkedCount.collectAsStateWithLifecycle()
     val isBeforeStart by viewModel.isBeforeStartDate.collectAsStateWithLifecycle()
+    val isAfterToday by viewModel.isAfterToday.collectAsStateWithLifecycle()
+    val isProjectCompleted by viewModel.isProjectCompleted.collectAsStateWithLifecycle()
     val pendingUnmark by viewModel.pendingUnmark.collectAsStateWithLifecycle()
 
     val currencySymbol = CurrencyCodes.symbolFor(project?.currency.orEmpty())
@@ -111,7 +113,19 @@ fun AttendanceDayScreen(
 
             if (isBeforeStart) {
                 item(key = "before-start") {
-                    BackfillWarning()
+                    SoftNotice(text = stringResource(R.string.attendance_before_start_warning))
+                }
+            }
+
+            if (isAfterToday) {
+                item(key = "after-today") {
+                    SoftNotice(text = stringResource(R.string.attendance_after_today_warning))
+                }
+            }
+
+            if (isProjectCompleted) {
+                item(key = "project-completed") {
+                    SoftNotice(text = stringResource(R.string.attendance_project_completed_notice))
                 }
             }
 
@@ -181,8 +195,13 @@ fun AttendanceDayScreen(
     }
 }
 
+/**
+ * A soft, non-blocking notice line (backfill date, future date, or completed project) — same
+ * warn-don't-block visual treatment for all three (LOCKED Phase 3 + the 2026-08-02 amendment
+ * extending it to future dates and completed projects), announced once via a Polite live region.
+ */
 @Composable
-private fun BackfillWarning(modifier: Modifier = Modifier) {
+private fun SoftNotice(text: String, modifier: Modifier = Modifier) {
     Surface(
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -190,7 +209,7 @@ private fun BackfillWarning(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxWidth(),
     ) {
         Text(
-            text = stringResource(R.string.attendance_before_start_warning),
+            text = text,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier
                 .padding(CrewTallyTheme.dimens.spaceLg)

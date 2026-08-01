@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.vague.crewtally.R
@@ -27,6 +28,7 @@ import com.vague.crewtally.ui.components.AttendanceStateToggle
 import com.vague.crewtally.ui.theme.CrewTallyShape
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.theme.CrewTallyType
+import com.vague.crewtally.ui.util.accessibleMoneyDescription
 import com.vague.crewtally.ui.viewmodel.AttendanceRowUi
 import com.vague.crewtally.util.Money
 
@@ -70,10 +72,17 @@ fun AttendanceClerkRow(
                         )
                     }
                 }
+                val rateDescription = stringResource(
+                    R.string.attendance_clerk_rate_description,
+                    Money.formatWithSymbol(row.rateMinorUnits, currencySymbol),
+                )
                 Text(
                     text = Money.formatWithSymbol(row.rateMinorUnits, currencySymbol),
                     style = CrewTallyType.moneySmall,
                     color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.semantics {
+                        contentDescription = rateDescription
+                    },
                 )
             }
 
@@ -87,9 +96,19 @@ fun AttendanceClerkRow(
             } else {
                 stringResource(R.string.attendance_extras_action)
             }
+            val extrasAccessibleLabel = if (row.extrasTotalMinorUnits != 0L) {
+                stringResource(
+                    R.string.attendance_extras_action_with_total,
+                    accessibleMoneyDescription(row.extrasTotalMinorUnits, currencySymbol),
+                )
+            } else {
+                stringResource(R.string.attendance_extras_action)
+            }
             TextButton(
                 onClick = onExtras,
-                modifier = Modifier.heightIn(min = CrewTallyTheme.dimens.minTarget),
+                modifier = Modifier
+                    .heightIn(min = CrewTallyTheme.dimens.minTarget)
+                    .semantics { contentDescription = extrasAccessibleLabel },
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ReceiptLong,

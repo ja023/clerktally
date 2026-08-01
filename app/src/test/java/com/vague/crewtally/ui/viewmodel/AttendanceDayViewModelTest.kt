@@ -1,8 +1,10 @@
 package com.vague.crewtally.ui.viewmodel
 
 import com.vague.crewtally.data.local.AttendanceEntryEntity
+import com.vague.crewtally.data.local.AttendanceWriter
 import com.vague.crewtally.data.local.ExtraPayLineEntity
 import com.vague.crewtally.data.local.ProjectEntity
+import com.vague.crewtally.data.local.ProjectStatus
 import com.vague.crewtally.data.local.RosterEntryEntity
 import com.vague.crewtally.testutil.FakeAttendanceEntryDao
 import com.vague.crewtally.testutil.FakeAttendanceWriter
@@ -11,6 +13,7 @@ import com.vague.crewtally.testutil.FakeExtraPayLineDao
 import com.vague.crewtally.testutil.FakeProjectDao
 import com.vague.crewtally.testutil.FakeRosterEntryDao
 import java.time.LocalDate
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -64,7 +67,7 @@ class AttendanceDayViewModelTest {
         attendanceEntryDao = FakeAttendanceEntryDao()
         extraPayLineDao = FakeExtraPayLineDao(attendanceEntryDao)
         attendanceEntryDao.extraPayLineDao = extraPayLineDao
-        writer = FakeAttendanceWriter(attendanceEntryDao)
+        writer = FakeAttendanceWriter(attendanceEntryDao, extraPayLineDao, rosterEntryDao)
 
         projectDao.seed(project)
         seedRosterClerk("clerk-a", "Alex", 5000)
@@ -102,6 +105,8 @@ class AttendanceDayViewModelTest {
         viewModel.rows,
         viewModel.unmarkedCount,
         viewModel.isBeforeStartDate,
+        viewModel.isAfterToday,
+        viewModel.isProjectCompleted,
         viewModel.pendingUnmark,
         viewModel.project,
     ).map { flow -> launch(Dispatchers.Unconfined) { flow.collect {} } }
@@ -340,5 +345,94 @@ class AttendanceDayViewModelTest {
         assertTrue("last tap wins", rows.single().present)
 
         jobs.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `a date after today raises a future-date warning without blocking`() = runTest {
+        val jobs = startCollecting()
+
+        assertFalse(viewModel.isAfterToday.value)
+        viewModel.onEvent(AttendanceDayEvent.DateSelected(LocalDate.now().plusDays(1)))
+        assertTrue(viewModel.isAfterToday.value)
+
+        // Still not blocked: a tap still writes normally on a future date.
+        viewModel.onEvent(AttendanceDayEvent.PresentTapped("clerk-a"))
+        assertEquals(1, rowsForClerk("clerk-a").size)
+
+        jobs.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `a completed project shows a soft non-blocking notice`() = runTest {
+        projectDao.upsert(project.copy(status = ProjectStatus.COMPLETED))
+        val jobs = startCollecting()
+
+        assertTrue(viewModel.isProjectCompleted.value)
+
+        // Still not blocked: history never locks (LOCKED #11).
+        viewModel.onEvent(AttendanceDayEvent.PresentTapped("clerk-a"))
+        assertEquals(1, rowsForClerk("clerk-a").size)
+
+        jobs.forEach { it.cancel() }
+    }
+
+    @Test
+    fun `a write gated mid-flight lands on the day it was captured for, not wherever the user has since navigated`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val gatedWriter = GatedAttendanceWriter(writer, gate)
+        val gatedViewModel = AttendanceDayViewModel(
+            projectId = projectId,
+            initialDate = day,
+            projectDao = projectDao,
+            rosterEntryDao = rosterEntryDao,
+            attendanceEntryDao = attendanceEntryDao,
+            extraPayLineDao = extraPayLineDao,
+            attendanceWriter = gatedWriter,
+        )
+        val jobs = listOf(
+            launch(Dispatchers.Unconfined) { gatedViewModel.rows.collect {} },
+            launch(Dispatchers.Unconfined) { gatedViewModel.isBeforeStartDate.collect {} },
+        )
+
+        // Tap present: onStatusTapped captures `day` == the day showing right now (day A)
+        // synchronously, BEFORE launching — then the write genuinely suspends on the gate.
+        gatedViewModel.onEvent(AttendanceDayEvent.PresentTapped("clerk-a"))
+
+        // Navigate to day B while write 1 is still gated/in-flight.
+        gatedViewModel.onEvent(AttendanceDayEvent.NextDay)
+        assertEquals("test setup: the VM's visible date has moved on", day.plusDays(1), gatedViewModel.date.value)
+
+        // Release the queued write.
+        gate.complete(Unit)
+
+        val onDayA = attendanceEntryDao.all().filter { it.clerkId == "clerk-a" && it.date == day }
+        val onDayB = attendanceEntryDao.all().filter { it.clerkId == "clerk-a" && it.date == day.plusDays(1) }
+        assertEquals("the queued write must land on the day it was captured for", 1, onDayA.size)
+        assertTrue("must NOT land on the day the user navigated to afterward", onDayB.isEmpty())
+
+        jobs.forEach { it.cancel() }
+    }
+}
+
+/**
+ * Wraps a real [AttendanceWriter] but suspends on [gate] before delegating [setAttendance] —
+ * lets a test pause a write mid-flight to prove the captured-day fix holds against a genuine
+ * concurrent date change, which an always-immediately-completing fake can't reproduce under
+ * [kotlinx.coroutines.test.UnconfinedTestDispatcher]. Mirrors the `GatedProjectRosterWriter`
+ * pattern in AddRosterClerkViewModelTest.
+ */
+private class GatedAttendanceWriter(
+    private val delegate: AttendanceWriter,
+    private val gate: CompletableDeferred<Unit>,
+) : AttendanceWriter by delegate {
+    override suspend fun setAttendance(
+        projectId: String,
+        clerkId: String,
+        date: LocalDate,
+        present: Boolean,
+        rateSnapshot: Long,
+    ) {
+        gate.await()
+        delegate.setAttendance(projectId, clerkId, date, present, rateSnapshot)
     }
 }

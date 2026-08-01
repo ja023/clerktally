@@ -9,7 +9,6 @@ import com.vague.crewtally.data.local.AttendanceEntryDao
 import com.vague.crewtally.data.local.AttendanceWriter
 import com.vague.crewtally.data.local.ClerkDao
 import com.vague.crewtally.data.local.ClerkEntity
-import com.vague.crewtally.data.local.ProjectRosterWriter
 import com.vague.crewtally.data.local.RosterEntryDao
 import com.vague.crewtally.util.Money
 import java.time.LocalDate
@@ -54,7 +53,8 @@ sealed interface AttendanceWalkInEvent {
  * already on this day — neither on the active roster nor already carrying an attendance row for
  * the date. Save always writes a present=true attendance row with the entered rate as its
  * snapshot; if "Also add to project roster" is on it additionally reactivates/creates the
- * roster row via [ProjectRosterWriter.upsertRosterEntryForPair] (default OFF = day-only).
+ * roster row, both in ONE atomic transaction via [AttendanceWriter.saveWalkIn] (default OFF =
+ * day-only) — see that method's KDoc for why the two writes can't be split across calls.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AttendanceWalkInViewModel(
@@ -64,7 +64,6 @@ class AttendanceWalkInViewModel(
     private val rosterEntryDao: RosterEntryDao,
     attendanceEntryDao: AttendanceEntryDao,
     private val attendanceWriter: AttendanceWriter,
-    private val rosterWriter: ProjectRosterWriter,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AttendanceWalkInUiState())
@@ -129,12 +128,9 @@ class AttendanceWalkInViewModel(
         }
         viewModelScope.launch {
             _state.update { it.copy(isSaving = true) }
-            // Day-only walk-in: a present=true attendance row with the entered rate snapshotted.
-            attendanceWriter.setAttendance(projectId, clerkId, date, present = true, rateSnapshot = rate)
-            if (current.alsoAddToRoster) {
-                // Reuse the roster writer's atomic id-reuse path rather than reinventing it.
-                rosterWriter.upsertRosterEntryForPair(projectId, clerkId, rate)
-            }
+            // Day-only present=true attendance row, plus the roster row when opted in — one
+            // atomic write (see AttendanceWriter.saveWalkIn's KDoc for why).
+            attendanceWriter.saveWalkIn(projectId, clerkId, date, rateSnapshot = rate, alsoAddToRoster = current.alsoAddToRoster)
             _state.update { it.copy(isSaving = false, saveComplete = true) }
         }
     }
@@ -147,7 +143,6 @@ class AttendanceWalkInViewModel(
             rosterEntryDao: RosterEntryDao,
             attendanceEntryDao: AttendanceEntryDao,
             attendanceWriter: AttendanceWriter,
-            rosterWriter: ProjectRosterWriter,
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 AttendanceWalkInViewModel(
@@ -157,7 +152,6 @@ class AttendanceWalkInViewModel(
                     rosterEntryDao,
                     attendanceEntryDao,
                     attendanceWriter,
-                    rosterWriter,
                 )
             }
         }

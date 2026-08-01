@@ -23,8 +23,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /** The preset extra-pay labels, plus a free-text option. Order is the chip order in the UI. */
 enum class ExtraPreset { LUNCH, TRANSPORT, BONUS, CUSTOM }
@@ -52,7 +50,12 @@ sealed interface AttendanceExtrasEvent {
  * Backs the per clerk-day extras editor. Extras attach to ANY status: opening the editor for
  * an Unmarked or Absent clerk lazily creates a present=false carrier attendance row (via
  * [AttendanceWriter.ensureAttendanceEntry]) the first time a line is added, so the extra has
- * something to hang on. [rateSnapshot] is the rate that carrier is created with.
+ * something to hang on. [rateSnapshot] is the rate that carrier is created with (the writer may
+ * prefer a fresher roster rate over it — see [AttendanceWriter.ensureAttendanceEntry]'s KDoc).
+ *
+ * Write ordering across screens is [AttendanceWriter]'s own guarantee (its internal mutex), not
+ * this ViewModel's — [isSaving] here is purely a re-entrancy guard against a double tap on the
+ * same screen, not a serialization primitive.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AttendanceExtrasViewModel(
@@ -67,8 +70,6 @@ class AttendanceExtrasViewModel(
 
     private val _state = MutableStateFlow(AttendanceExtrasUiState())
     val state: StateFlow<AttendanceExtrasUiState> = _state.asStateFlow()
-
-    private val addMutex = Mutex()
 
     /** The current lines for this clerk-day: re-derived whenever the carrier entry appears/changes. */
     val lines: StateFlow<List<ExtraPayLineEntity>> =
@@ -92,7 +93,7 @@ class AttendanceExtrasViewModel(
             is AttendanceExtrasEvent.PresetChanged ->
                 _state.update { it.copy(preset = event.preset, customLabelError = false) }
             is AttendanceExtrasEvent.CustomLabelChanged ->
-                _state.update { it.copy(customLabel = event.value, customLabelError = false) }
+                _state.update { it.copy(customLabel = event.value.take(MAX_CUSTOM_LABEL_LENGTH), customLabelError = false) }
             is AttendanceExtrasEvent.AmountChanged ->
                 _state.update { it.copy(amountInput = event.value, amountError = false) }
             is AttendanceExtrasEvent.DeductionChanged ->
@@ -116,34 +117,37 @@ class AttendanceExtrasViewModel(
         }
         val signedAmount = if (current.isDeduction) -magnitude else magnitude
         viewModelScope.launch {
-            addMutex.withLock {
-                _state.update { it.copy(isSaving = true) }
-                // Ensure the carrier row exists (present=false if the clerk was Unmarked/Absent)
-                // and attach the line to it — atomic id reuse guards the unique index.
-                val entryId = attendanceWriter.ensureAttendanceEntry(projectId, clerkId, date, rateSnapshot)
-                extraPayLineDao.upsert(
-                    ExtraPayLineEntity(
-                        id = UUID.randomUUID().toString(),
-                        attendanceEntryId = entryId,
-                        label = labelFor(current),
-                        amount = signedAmount,
-                    ),
+            _state.update { it.copy(isSaving = true) }
+            // Ensure the carrier row exists (present=false if the clerk was Unmarked/Absent)
+            // and attach the line to it — atomic id reuse guards the unique index.
+            val entryId = attendanceWriter.ensureAttendanceEntry(projectId, clerkId, date, rateSnapshot)
+            extraPayLineDao.upsert(
+                ExtraPayLineEntity(
+                    id = UUID.randomUUID().toString(),
+                    attendanceEntryId = entryId,
+                    label = labelFor(current),
+                    amount = signedAmount,
+                ),
+            )
+            _state.update {
+                it.copy(
+                    isSaving = false,
+                    amountInput = "",
+                    customLabel = "",
+                    isDeduction = false,
+                    preset = ExtraPreset.LUNCH,
                 )
-                _state.update {
-                    it.copy(
-                        isSaving = false,
-                        amountInput = "",
-                        customLabel = "",
-                        isDeduction = false,
-                        preset = ExtraPreset.LUNCH,
-                    )
-                }
             }
         }
     }
 
+    /**
+     * Routed through the writer (not a bare `extraPayLineDao.delete(line)`) so the "last extra
+     * on a carrier-only row deletes the row too" rule runs atomically — see
+     * [AttendanceWriter.deleteExtraLine].
+     */
     private fun onDeleteLine(line: ExtraPayLineEntity) {
-        viewModelScope.launch { extraPayLineDao.delete(line) }
+        viewModelScope.launch { attendanceWriter.deleteExtraLine(line) }
     }
 
     /** Preset label keys resolved to display text by the screen; CUSTOM uses the typed label. */
@@ -160,6 +164,9 @@ class AttendanceExtrasViewModel(
         const val PRESET_LABEL_LUNCH = "Lunch"
         const val PRESET_LABEL_TRANSPORT = "Transport"
         const val PRESET_LABEL_BONUS = "Bonus"
+
+        /** A custom extra-pay label is free text with no error UI, so it needs a hard ceiling. */
+        private const val MAX_CUSTOM_LABEL_LENGTH = 60
 
         fun factory(
             projectId: String,

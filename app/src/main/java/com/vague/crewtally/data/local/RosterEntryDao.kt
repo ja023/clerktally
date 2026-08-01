@@ -60,4 +60,13 @@ interface RosterEntryDao {
      */
     @Query("SELECT dailyRate FROM roster_entries WHERE clerkId = :clerkId ORDER BY rowid DESC LIMIT 1")
     suspend fun getMostRecentRateForClerk(clerkId: String): Long?
+
+    /**
+     * The clerk's CURRENT active daily rate on this exact project, or null when they have no
+     * active roster row (a day-only walk-in, or a removed roster clerk). [AttendanceWriter]
+     * prefers this live value over a rateSnapshot threaded through nav args from screen-open
+     * time, since the roster rate can change while the day screen is sitting open.
+     */
+    @Query("SELECT dailyRate FROM roster_entries WHERE projectId = :projectId AND clerkId = :clerkId AND removedAt IS NULL LIMIT 1")
+    suspend fun getActiveDailyRate(projectId: String, clerkId: String): Long?
 }

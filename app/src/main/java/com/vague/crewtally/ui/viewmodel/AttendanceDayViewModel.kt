@@ -7,10 +7,12 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.vague.crewtally.data.local.AttendanceEntryDao
 import com.vague.crewtally.data.local.AttendanceWriter
+import com.vague.crewtally.data.local.ClearAttendanceResult
 import com.vague.crewtally.data.local.ClerkRate
 import com.vague.crewtally.data.local.ExtraPayLineDao
 import com.vague.crewtally.data.local.ProjectDao
 import com.vague.crewtally.data.local.ProjectEntity
+import com.vague.crewtally.data.local.ProjectStatus
 import com.vague.crewtally.data.local.RosterEntryDao
 import java.time.LocalDate
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,8 +25,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /** The three attendance states a clerk row can show. Unmarked = no attendance row exists. */
 enum class AttendanceState { UNMARKED, PRESENT, ABSENT }
@@ -65,9 +65,15 @@ sealed interface AttendanceDayEvent {
  * carries a three-state Unmarked / Present / Absent status that auto-saves on every tap through
  * [AttendanceWriter] (no Save button).
  *
- * Every write goes through the writer's atomic look-up-id-then-write transaction, and a single
- * [writeMutex] serializes the fire-and-forget taps so a rapid Present -> Absent -> Present
- * sequence applies in order and settles as exactly one row.
+ * Every write goes through the writer's atomic look-up-id-then-write transaction. Ordering
+ * across rapid taps — and across every OTHER attendance screen writing through the same shared
+ * [AttendanceWriter] instance — is [AttendanceWriter]'s own guarantee now (its internal mutex),
+ * not this ViewModel's; a per-ViewModel mutex could never serialize against a sibling extras or
+ * walk-in screen writing concurrently. Each write handler captures the selected [_date] into a
+ * local `val` synchronously, before launching its coroutine — [_date] is a mutable StateFlow the
+ * user can change (prev/next/date-picker) while a write is still in flight, so reading it lazily
+ * inside the launched block could apply a queued write to whatever day the user has since
+ * navigated to instead of the day that was showing when the tap happened.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class AttendanceDayViewModel(
@@ -86,8 +92,6 @@ class AttendanceDayViewModel(
     /** The clerk whose unmark is awaiting confirmation because their row carries extras. */
     private val _pendingUnmark = MutableStateFlow<AttendanceRowUi?>(null)
     val pendingUnmark: StateFlow<AttendanceRowUi?> = _pendingUnmark.asStateFlow()
-
-    private val writeMutex = Mutex()
 
     val project: StateFlow<ProjectEntity?> = projectDao.observeById(projectId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
@@ -143,6 +147,22 @@ class AttendanceDayViewModel(
         current != null && day.isBefore(current.startDate)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), false)
 
+    /**
+     * True when the selected date is after today (AMENDED 2026-08-02: same warn-don't-block
+     * treatment as a backfill date, just in the other direction).
+     */
+    val isAfterToday: StateFlow<Boolean> = _date
+        .map { day -> day.isAfter(LocalDate.now()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), false)
+
+    /**
+     * True when the project is COMPLETED — the day screen still works on it (LOCKED #11: history
+     * never locks), just with a soft non-blocking notice (AMENDED 2026-08-02).
+     */
+    val isProjectCompleted: StateFlow<Boolean> = project
+        .map { current -> current?.status == ProjectStatus.COMPLETED }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), false)
+
     fun onEvent(event: AttendanceDayEvent) {
         when (event) {
             AttendanceDayEvent.PrevDay -> _date.value = _date.value.minusDays(1)
@@ -158,30 +178,33 @@ class AttendanceDayViewModel(
 
     private fun onStatusTapped(clerkId: String, tapped: AttendanceState) {
         val row = rows.value.find { it.clerkId == clerkId } ?: return
+        // Captured synchronously — before launch — so a date change while this write is
+        // queued/in-flight can't retarget it onto whatever day the user has navigated to since.
+        val day = _date.value
         if (row.state == tapped) {
             // Tapping the already-selected state clears the clerk back to Unmarked.
             requestUnmark(row)
         } else {
             val present = tapped == AttendanceState.PRESENT
             viewModelScope.launch {
-                writeMutex.withLock {
-                    attendanceWriter.setAttendance(projectId, clerkId, _date.value, present, row.rateMinorUnits)
-                }
+                attendanceWriter.setAttendance(projectId, clerkId, day, present, row.rateMinorUnits)
             }
         }
     }
 
-    /** Extras cascade-delete with the row, so an unmark that would drop extras asks first. */
+    /**
+     * Extras cascade-delete with the row, so an unmark that would drop extras asks first. The
+     * extras check now lives inside [AttendanceWriter.clearAttendance]'s own transaction (not a
+     * client-side pre-check here) so a concurrently-added extra can never sneak in between a
+     * check and a delete that used to be two separate, unlocked steps.
+     */
     private fun requestUnmark(row: AttendanceRowUi) {
-        val entryId = row.attendanceEntryId ?: return
+        row.attendanceEntryId ?: return
+        val day = _date.value
         viewModelScope.launch {
-            val hasExtras = extraPayLineDao.getForAttendance(entryId).isNotEmpty()
-            if (hasExtras) {
+            val result = attendanceWriter.clearAttendance(projectId, row.clerkId, day)
+            if (result is ClearAttendanceResult.BlockedByExtras) {
                 _pendingUnmark.value = row
-            } else {
-                writeMutex.withLock {
-                    attendanceWriter.clearAttendance(projectId, row.clerkId, _date.value)
-                }
             }
         }
     }
@@ -189,10 +212,9 @@ class AttendanceDayViewModel(
     private fun onConfirmUnmark() {
         val row = _pendingUnmark.value ?: return
         _pendingUnmark.value = null
+        val day = _date.value
         viewModelScope.launch {
-            writeMutex.withLock {
-                attendanceWriter.clearAttendance(projectId, row.clerkId, _date.value)
-            }
+            attendanceWriter.clearAttendance(projectId, row.clerkId, day, force = true)
         }
     }
 
@@ -201,12 +223,11 @@ class AttendanceDayViewModel(
             .filter { !it.isWalkIn }
             .map { ClerkRate(it.clerkId, it.rateMinorUnits) }
         if (clerkRates.isEmpty()) return
+        val day = _date.value
         viewModelScope.launch {
-            writeMutex.withLock {
-                // The writer skips clerks that already have a row, so explicit Absent marks
-                // (and anyone already Present) are left untouched.
-                attendanceWriter.markAllPresent(projectId, _date.value, clerkRates)
-            }
+            // The writer skips clerks that already have a row, so explicit Absent marks
+            // (and anyone already Present) are left untouched.
+            attendanceWriter.markAllPresent(projectId, day, clerkRates)
         }
     }
 

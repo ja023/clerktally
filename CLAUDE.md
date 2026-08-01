@@ -95,10 +95,10 @@ Fable orchestrates; sub-decisions inside each phase still go to Jad as MCQs befo
 
 ## Phase 3 LOCKED decisions (2026-08-01) — Attendance daily loop
 
-- Entry: project detail gains a prominent "Take attendance" action → day screen, default TODAY, prev/next day arrows + date picker (backfill any date, including before startDate — warn, don't block).
+- Entry: project detail gains a prominent "Take attendance" action → day screen, default TODAY, prev/next day arrows + date picker (backfill any date, including before startDate — warn, don't block). AMENDED 2026-08-02 (Phase 3 review, autonomous calls in the spirit of locked rules): (a) dates AFTER today get the same warn-don't-block treatment as backfill; (b) the day screen works on COMPLETED projects too (locked #11: history never locks) with a soft "project is completed" notice; (c) deleting the last extra on a carrier-only row (present=false, never explicitly marked) removes the carrier row so it can't masquerade as a real Absent.
 - **New day starts UNMARKED** (no AttendanceEntry row = unmarked). One big "Mark all present" button, then tap exceptions. Row tap cycles/toggles Present ↔ Absent, ≥56dp targets, state visually unmistakable (not color-only). A day with unmarked clerks shows a soft reminder line, never blocks.
 - **Instant auto-save per tap** — no Save button. Present=true / Absent=false rows written immediately with rateSnapshot copied from the roster at write time. Unmarking (back to no-answer) deletes the row (only if it has no extras; with extras, warn first).
-- **Extras attach to the day regardless of present/absent** (fronted gas on a day off, deductions). Extras UI per clerk row: opens a sheet listing that day's lines: preset labels Lunch / Transport / Bonus + free-text label, amount (negative allowed = deduction, wording "Deduction" with minus shown). An absent/unmarked clerk with extras gets an AttendanceEntry row (present=false) to carry them.
+- **Extras attach to the day regardless of present/absent** (fronted gas on a day off, deductions). Extras UI per clerk row: opens a FULL-SCREEN editor (AMENDED 2026-08-02 from "sheet" — the older locked "forms are full-screen pages" rule wins; recorded during Phase 3 review) listing that day's lines: preset labels Lunch / Transport / Bonus + free-text label, amount (negative allowed = deduction, wording "Deduction" with minus shown). An absent/unmarked clerk with extras gets an AttendanceEntry row (present=false) to carry them.
 - **Walk-ins: day-only + optional roster join.** "Add clerk for this day" → picker of active clerks not on today's list → rate (pre-filled from last rate anywhere) → checkbox "Also add to project roster" (default OFF). Day-only walk-in gets an AttendanceEntry with rateSnapshot but NO roster row. Remove-for-day removes that day's row (warn if it has extras).
 - Attendance history: project detail also gets a compact per-day summary list (date, N present, extras total) → tapping opens that day.
 
@@ -130,6 +130,8 @@ Fable orchestrates; sub-decisions inside each phase still go to Jad as MCQs befo
 Phases 3→6 run WITHOUT check-in questions: build → 3-reviewer pass (kotlin, general, a11y) → fix batch → green gate → commit, phase by phase, sequentially in the main repo. **ONE final APK after Phase 6** pushed to the phone (plus the already-requested Phase 0-2 APK install happening now). Stop and ask ONLY if something contradicts a LOCKED decision. Device feedback from Jad folds in whenever it arrives.
 
 ## Review debt (accepted findings, deliberately deferred — address in the phase noted)
+
+- **Wizard step transitions don't move AT focus** to the new step's first field (CreateProject, AddRosterClerk, AttendanceWalkIn — liveRegion announcement exists, focus move doesn't). Phase 6 polish, fix all three together with one FocusRequester pattern.
 
 - **Extract shared `RecordLifecycleActions` composable** (archive/unarchive/delete buttons + 3 confirm dialogs, ~70 lines duplicated between ClerkFormScreen and CompanyFormScreen) — do this in Phase 3 BEFORE a third form copies the pattern.
 - **Contact-search tests**: ContactsSearcher LIKE-escaping, union+dedupe, ContactsPermissionStore ask-once — needs Robolectric; add when a Robolectric setup exists (Phase 5/6).

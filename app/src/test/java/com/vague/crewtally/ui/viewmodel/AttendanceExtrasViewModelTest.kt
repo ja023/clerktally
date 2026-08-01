@@ -5,6 +5,7 @@ import com.vague.crewtally.data.local.ExtraPayLineEntity
 import com.vague.crewtally.testutil.FakeAttendanceEntryDao
 import com.vague.crewtally.testutil.FakeAttendanceWriter
 import com.vague.crewtally.testutil.FakeExtraPayLineDao
+import com.vague.crewtally.testutil.FakeRosterEntryDao
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,6 +36,7 @@ class AttendanceExtrasViewModelTest {
 
     private lateinit var attendanceEntryDao: FakeAttendanceEntryDao
     private lateinit var extraPayLineDao: FakeExtraPayLineDao
+    private lateinit var rosterEntryDao: FakeRosterEntryDao
     private lateinit var writer: FakeAttendanceWriter
     private lateinit var viewModel: AttendanceExtrasViewModel
 
@@ -44,7 +46,8 @@ class AttendanceExtrasViewModelTest {
         attendanceEntryDao = FakeAttendanceEntryDao()
         extraPayLineDao = FakeExtraPayLineDao(attendanceEntryDao)
         attendanceEntryDao.extraPayLineDao = extraPayLineDao
-        writer = FakeAttendanceWriter(attendanceEntryDao)
+        rosterEntryDao = FakeRosterEntryDao()
+        writer = FakeAttendanceWriter(attendanceEntryDao, extraPayLineDao, rosterEntryDao)
         viewModel = buildViewModel()
     }
 
@@ -173,6 +176,73 @@ class AttendanceExtrasViewModelTest {
         viewModel.onEvent(AttendanceExtrasEvent.DeleteLine(line))
 
         assertTrue(extraPayLineDao.all().isEmpty())
+    }
+
+    @Test
+    fun `deleting the last extra on a carrier-only row deletes the carrier row too`() = runTest {
+        attendanceEntryDao.seed(
+            AttendanceEntryEntity(
+                id = "att-1",
+                projectId = projectId,
+                clerkId = clerkId,
+                date = date,
+                present = false,
+                rateSnapshot = rateSnapshot,
+                explicitlyMarked = false,
+            ),
+        )
+        val line = ExtraPayLineEntity(id = "x1", attendanceEntryId = "att-1", label = "Lunch", amount = 1000)
+        extraPayLineDao.seed(line)
+
+        viewModel.onEvent(AttendanceExtrasEvent.DeleteLine(line))
+
+        assertTrue("the line is gone", extraPayLineDao.all().isEmpty())
+        assertTrue("the carrier-only row must not masquerade as a real Absent", clerkRows().isEmpty())
+    }
+
+    @Test
+    fun `deleting the last extra on an explicitly-marked absent row keeps the row`() = runTest {
+        attendanceEntryDao.seed(
+            AttendanceEntryEntity(
+                id = "att-1",
+                projectId = projectId,
+                clerkId = clerkId,
+                date = date,
+                present = false,
+                rateSnapshot = rateSnapshot,
+                explicitlyMarked = true,
+            ),
+        )
+        val line = ExtraPayLineEntity(id = "x1", attendanceEntryId = "att-1", label = "Lunch", amount = 1000)
+        extraPayLineDao.seed(line)
+
+        viewModel.onEvent(AttendanceExtrasEvent.DeleteLine(line))
+
+        assertTrue("the line is gone", extraPayLineDao.all().isEmpty())
+        assertEquals("a real Absent mark never auto-deletes", 1, clerkRows().size)
+    }
+
+    @Test
+    fun `deleting one of two extras on a carrier-only row keeps the row`() = runTest {
+        attendanceEntryDao.seed(
+            AttendanceEntryEntity(
+                id = "att-1",
+                projectId = projectId,
+                clerkId = clerkId,
+                date = date,
+                present = false,
+                rateSnapshot = rateSnapshot,
+                explicitlyMarked = false,
+            ),
+        )
+        val line1 = ExtraPayLineEntity(id = "x1", attendanceEntryId = "att-1", label = "Lunch", amount = 1000)
+        val line2 = ExtraPayLineEntity(id = "x2", attendanceEntryId = "att-1", label = "Transport", amount = 500)
+        extraPayLineDao.seed(line1, line2)
+
+        viewModel.onEvent(AttendanceExtrasEvent.DeleteLine(line1))
+
+        assertEquals("only the deleted line is gone", listOf("x2"), extraPayLineDao.all().map { it.id })
+        assertEquals("the row still carries a remaining line", 1, clerkRows().size)
     }
 
     @Test

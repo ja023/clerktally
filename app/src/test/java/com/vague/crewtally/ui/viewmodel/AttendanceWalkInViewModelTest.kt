@@ -1,13 +1,13 @@
 package com.vague.crewtally.ui.viewmodel
 
 import com.vague.crewtally.data.local.AttendanceEntryEntity
+import com.vague.crewtally.data.local.AttendanceWriter
 import com.vague.crewtally.data.local.ClerkEntity
 import com.vague.crewtally.data.local.RosterEntryEntity
 import com.vague.crewtally.testutil.FakeAttendanceEntryDao
 import com.vague.crewtally.testutil.FakeAttendanceWriter
 import com.vague.crewtally.testutil.FakeClerkDao
-import com.vague.crewtally.testutil.FakeProjectDao
-import com.vague.crewtally.testutil.FakeProjectRosterWriter
+import com.vague.crewtally.testutil.FakeExtraPayLineDao
 import com.vague.crewtally.testutil.FakeRosterEntryDao
 import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
@@ -40,8 +40,8 @@ class AttendanceWalkInViewModelTest {
     private lateinit var clerkDao: FakeClerkDao
     private lateinit var rosterEntryDao: FakeRosterEntryDao
     private lateinit var attendanceEntryDao: FakeAttendanceEntryDao
+    private lateinit var extraPayLineDao: FakeExtraPayLineDao
     private lateinit var writer: FakeAttendanceWriter
-    private lateinit var rosterWriter: FakeProjectRosterWriter
     private lateinit var viewModel: AttendanceWalkInViewModel
 
     @Before
@@ -50,8 +50,9 @@ class AttendanceWalkInViewModelTest {
         clerkDao = FakeClerkDao()
         rosterEntryDao = FakeRosterEntryDao()
         attendanceEntryDao = FakeAttendanceEntryDao()
-        writer = FakeAttendanceWriter(attendanceEntryDao)
-        rosterWriter = FakeProjectRosterWriter(FakeProjectDao(), rosterEntryDao)
+        extraPayLineDao = FakeExtraPayLineDao(attendanceEntryDao)
+        attendanceEntryDao.extraPayLineDao = extraPayLineDao
+        writer = FakeAttendanceWriter(attendanceEntryDao, extraPayLineDao, rosterEntryDao)
 
         clerkDao.seed(
             ClerkEntity(id = "clerk-a", name = "Alex"),
@@ -75,14 +76,13 @@ class AttendanceWalkInViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun buildViewModel() = AttendanceWalkInViewModel(
+    private fun buildViewModel(attendanceWriter: AttendanceWriter = writer) = AttendanceWalkInViewModel(
         projectId = projectId,
         date = date,
         clerkDao = clerkDao,
         rosterEntryDao = rosterEntryDao,
         attendanceEntryDao = attendanceEntryDao,
-        attendanceWriter = writer,
-        rosterWriter = rosterWriter,
+        attendanceWriter = attendanceWriter,
     )
 
     private fun TestScope.keepAvailableHot(): Job =
@@ -122,7 +122,7 @@ class AttendanceWalkInViewModelTest {
         assertTrue("walk-in is present", rows.single().present)
         assertEquals(4200L, rows.single().rateSnapshot)
         assertNull("no roster row for a day-only walk-in", rosterEntryDao.getForPair(projectId, "clerk-c"))
-        assertEquals(0, rosterWriter.upsertRosterEntryForPairCallCount)
+        assertEquals(1, writer.saveWalkInCallCount)
         assertTrue(viewModel.state.value.saveComplete)
     }
 
@@ -138,7 +138,7 @@ class AttendanceWalkInViewModelTest {
         val rosterRow = rosterEntryDao.getForPair(projectId, "clerk-c")
         assertEquals(4200L, rosterRow?.dailyRate)
         assertNull("newly added roster row is active", rosterRow?.removedAt)
-        assertEquals(1, rosterWriter.upsertRosterEntryForPairCallCount)
+        assertEquals(1, writer.saveWalkInCallCount)
     }
 
     @Test

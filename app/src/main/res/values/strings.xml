@@ -165,6 +165,8 @@
     <string name="attendance_pick_date">Change date</string>
     <string name="attendance_date_heading">Date: %1$s</string>
     <string name="attendance_before_start_warning">This is before the project\'s start date. You can still record attendance for it.</string>
+    <string name="attendance_after_today_warning">This date is in the future. You can still record attendance for it.</string>
+    <string name="attendance_project_completed_notice">This project is completed.</string>
     <string name="attendance_mark_all_present">Mark all present</string>
     <plurals name="attendance_unmarked_reminder">
         <item quantity="one">%d clerk unmarked</item>
@@ -177,11 +179,14 @@
     <string name="attendance_state_unmarked">Unmarked</string>
     <string name="attendance_walk_in_tag">Walk-in</string>
     <string name="attendance_row_state_description">%1$s: %2$s</string>
+    <string name="attendance_state_toggle_unmark_hint">Double-tap to clear the mark</string>
+    <string name="attendance_state_toggle_clear_action">Clear mark</string>
     <string name="attendance_extras_action">Extras</string>
     <string name="attendance_extras_action_with_total">Extras: %1$s</string>
     <string name="attendance_add_walk_in">Add clerk for this day</string>
     <string name="attendance_unmark_confirm_title">Remove this day\'s record?</string>
     <string name="attendance_unmark_confirm_body">%1$s has extras recorded for this day. Clearing their attendance will delete those extras too. This can\'t be undone.</string>
+    <string name="attendance_clerk_rate_description">Daily rate %1$s</string>
 
     <!-- Attendance history on project detail (Phase 3) -->
     <string name="attendance_history_heading">Attendance history</string>
@@ -205,6 +210,7 @@
     <string name="extras_empty">No extras for this day yet.</string>
     <string name="extras_total">Total</string>
     <string name="extras_delete_line">Delete extra</string>
+    <string name="extras_delete_line_named">Delete %1$s, %2$s</string>
     <string name="extras_line_description">%1$s, %2$s</string>
 
     <!-- Walk-in (Phase 3) -->
@@ -212,4 +218,7 @@
     <string name="walk_in_rate_title">Set daily rate</string>
     <string name="walk_in_none_available">Every active clerk is already on this day.</string>
     <string name="walk_in_also_add_to_roster">Also add to project roster</string>
+
+    <!-- Shared money accessibility (Phase 3 a11y) -->
+    <string name="money_deduction_description">Deduction, %1$s</string>
 </resources>

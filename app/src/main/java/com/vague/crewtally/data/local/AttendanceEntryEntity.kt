@@ -16,6 +16,14 @@ import java.time.LocalDate
  *
  * onDelete = RESTRICT on both links (money-bearing). The (projectId, clerkId, date) index has
  * projectId as its prefix, satisfying the project foreign key; clerkId gets its own index.
+ *
+ * [explicitlyMarked] distinguishes a REAL mark from a synthetic carrier row: extras may attach
+ * to an Unmarked/Absent clerk (LOCKED), and the row that holds them is created with
+ * present=false, explicitlyMarked=false purely to give the extras somewhere to live — it must
+ * never masquerade as a deliberate Absent. Any Present/Absent tap sets it true. Deleting the
+ * last extra line off a present=false, explicitlyMarked=false row deletes the row itself
+ * (Phase 3 amendment (c)); a present=false row the user actually tapped Absent on
+ * (explicitlyMarked=true) never auto-deletes this way.
  */
 @Entity(
     tableName = "attendance_entries",
@@ -46,4 +54,6 @@ data class AttendanceEntryEntity(
     val present: Boolean,
     /** Daily rate in MINOR units, snapshotted from the roster when this row was saved. */
     val rateSnapshot: Long,
+    /** True for a real Present/Absent mark; false only for an extras-only carrier row. */
+    val explicitlyMarked: Boolean = true,
 )

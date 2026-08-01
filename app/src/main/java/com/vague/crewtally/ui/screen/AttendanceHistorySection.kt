@@ -16,6 +16,7 @@ import com.vague.crewtally.data.local.AttendanceDaySummary
 import com.vague.crewtally.ui.components.CrewTallyListRow
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.theme.CrewTallyType
+import com.vague.crewtally.ui.util.accessibleMoneyDescription
 import com.vague.crewtally.util.Money
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -56,6 +57,7 @@ fun AttendanceHistorySection(
                     val dateText = summary.date.format(DateFormat)
                     val presentText = stringResource(R.string.attendance_history_present_count, summary.presentCount)
                     val extrasText = Money.formatSignedWithSymbol(summary.extrasTotal, currencySymbol)
+                    val extrasDescription = accessibleMoneyDescription(summary.extrasTotal, currencySymbol)
                     CrewTallyListRow(
                         title = dateText,
                         subtitle = presentText,
@@ -64,7 +66,7 @@ fun AttendanceHistorySection(
                             R.string.attendance_history_row_description,
                             dateText,
                             summary.presentCount,
-                            extrasText,
+                            extrasDescription,
                         ),
                         trailing = if (summary.extrasTotal != 0L) {
                             {

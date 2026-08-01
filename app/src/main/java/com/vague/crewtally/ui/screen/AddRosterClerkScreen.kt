@@ -120,7 +120,7 @@ fun AddRosterClerkScreen(
             )
             AddRosterClerkStep.RATE -> Column(modifier = Modifier.padding(padding).fillMaxSize()) {
                 CrewTallyTextField(
-                    label = state.selectedClerkName,
+                    label = stringResource(R.string.roster_rate_field_label_for_clerk, state.selectedClerkName),
                     value = state.rateInput,
                     onValueChange = { viewModel.onEvent(AddRosterClerkEvent.RateChanged(it)) },
                     leadingText = CurrencyCodes.symbolFor(currency),

@@ -49,6 +49,7 @@ import com.vague.crewtally.ui.components.CrewTallyTextField
 import com.vague.crewtally.ui.theme.CrewTallyShape
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.theme.CrewTallyType
+import com.vague.crewtally.ui.util.accessibleMoneyDescription
 import com.vague.crewtally.ui.viewmodel.AttendanceExtrasEvent
 import com.vague.crewtally.ui.viewmodel.AttendanceExtrasViewModel
 import com.vague.crewtally.ui.viewmodel.ExtraPreset
@@ -203,8 +204,9 @@ private fun ExtraLineRow(
     modifier: Modifier = Modifier,
 ) {
     val amountText = Money.formatSignedWithSymbol(line.amount, symbol)
-    val deleteLabel = stringResource(R.string.extras_delete_line)
-    val lineDescription = stringResource(R.string.extras_line_description, line.label, amountText)
+    val amountDescription = accessibleMoneyDescription(line.amount, symbol)
+    val lineDescription = stringResource(R.string.extras_line_description, line.label, amountDescription)
+    val deleteLabel = stringResource(R.string.extras_delete_line_named, line.label, amountDescription)
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = CrewTallyShape.row,
@@ -219,19 +221,27 @@ private fun ExtraLineRow(
                 end = CrewTallyTheme.dimens.spaceSm,
             ),
         ) {
-            Text(
-                text = line.label,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+            // One merged node for label + amount — a single "<label>, <amount>" announcement
+            // instead of TalkBack reading the label's own text AND a contentDescription override
+            // AND the amount separately (three overlapping announcements for one fact).
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .weight(1f)
-                    .semantics { contentDescription = lineDescription },
-            )
-            Text(
-                text = amountText,
-                style = CrewTallyType.moneySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+                    .semantics(mergeDescendants = true) { contentDescription = lineDescription },
+            ) {
+                Text(
+                    text = line.label,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = amountText,
+                    style = CrewTallyType.moneySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Filled.DeleteOutline,
@@ -246,6 +256,7 @@ private fun ExtraLineRow(
 
 @Composable
 private fun TotalRow(total: Long, symbol: String, modifier: Modifier = Modifier) {
+    val totalDescription = accessibleMoneyDescription(total, symbol)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -263,6 +274,7 @@ private fun TotalRow(total: Long, symbol: String, modifier: Modifier = Modifier)
             text = Money.formatSignedWithSymbol(total, symbol),
             style = CrewTallyType.moneyMedium,
             color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.semantics { contentDescription = totalDescription },
         )
     }
 }
