@@ -161,6 +161,12 @@ class PaymentFormViewModel(
 
     private fun onSave() {
         if (_state.value.isSaving) return
+        // Guard against a tap that lands before the real balance/payment has loaded: `write()`
+        // below decides record-vs-update by checking `context.value.existing != null`, so on an
+        // EDIT screen a save that fires while context is still the unloaded default (existing =
+        // null) would fall through to the record-new branch and silently CREATE A DUPLICATE
+        // payment instead of updating the one being edited.
+        if (!context.value.isLoaded) return
         val amount = Money.parseToMinorUnits(_state.value.amountInput)
         if (amount == null || amount <= 0L) {
             _state.update { it.copy(amountError = true) }
@@ -194,6 +200,10 @@ class PaymentFormViewModel(
 
     private fun onRequestDelete() {
         val ctx = context.value
+        // Same guard as onSave: before context loads, ctx.currentOwed/oldAmount are still the
+        // unloaded defaults (both 0), so a delete confirm shown from this state would display a
+        // wrong balance impact rather than the real one.
+        if (!ctx.isLoaded) return
         val toOwed = BalanceCalculator.owedAfterChange(ctx.currentOwed, ctx.oldAmount, 0L)
         _state.update { it.copy(deleteConfirm = BalanceImpactPrompt(0L, ctx.currentOwed, toOwed)) }
     }

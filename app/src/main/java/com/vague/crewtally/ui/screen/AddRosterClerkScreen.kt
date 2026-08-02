@@ -22,7 +22,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -39,7 +38,6 @@ import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.data.local.ClerkEntity
-import com.vague.crewtally.data.local.RoomProjectRosterWriter
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyListRow
 import com.vague.crewtally.ui.components.CrewTallyTextField
@@ -68,7 +66,7 @@ fun AddRosterClerkScreen(
             projectId,
             database.clerkDao(),
             database.rosterEntryDao(),
-            remember { RoomProjectRosterWriter(database) },
+            application.projectRosterWriter,
         ),
     )
     val state by viewModel.state.collectAsStateWithLifecycle()

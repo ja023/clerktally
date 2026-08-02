@@ -30,7 +30,10 @@ sealed interface ClearAttendanceResult {
  * so writes fired from different screens (day screen, extras screen, walk-in screen — each a
  * separate ViewModel instance) still apply in the order they were tapped instead of racing each
  * other. A mutex that lived on a single ViewModel could never provide that guarantee across
- * screens; only the shared writer can.
+ * screens; only the shared writer can — which is why every screen's ViewModel factory pulls
+ * [CrewTallyApplication.attendanceWriter] (the ONE app-wide instance) rather than constructing
+ * its own `RoomAttendanceWriter(database)`. A screen that built its own would get its own
+ * private mutex, silently defeating this guarantee.
  *
  * An interface (not a concrete class) so ViewModel tests substitute an in-memory fake instead
  * of a real Room transaction.

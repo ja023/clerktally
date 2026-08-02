@@ -38,7 +38,6 @@ import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.data.local.ClerkEntity
-import com.vague.crewtally.data.local.RoomAttendanceWriter
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyCheckboxRow
 import com.vague.crewtally.ui.components.CrewTallyListRow
@@ -73,7 +72,7 @@ fun AttendanceWalkInScreen(
             clerkDao = database.clerkDao(),
             rosterEntryDao = database.rosterEntryDao(),
             attendanceEntryDao = database.attendanceEntryDao(),
-            attendanceWriter = RoomAttendanceWriter(database),
+            attendanceWriter = application.attendanceWriter,
         ),
     )
     val state by viewModel.state.collectAsStateWithLifecycle()

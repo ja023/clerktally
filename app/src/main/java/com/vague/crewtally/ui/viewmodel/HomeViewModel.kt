@@ -29,13 +29,26 @@ data class OwedClerkRow(
     val currency: String,
 )
 
+/**
+ * One currency's group of owed-clerk rows on the Home dashboard, sorted by amount owed
+ * descending WITHIN the group. Rows are never sorted flat across currencies — LBP minor units
+ * and USD minor units are not the same money, so comparing their raw [OwedClerkRow.owed]
+ * against each other is meaningless (LOCKED: cross-currency amounts are never compared). Group
+ * order matches [HomeUiState.outstanding]'s order, so the two sections read as one consistent
+ * per-currency story.
+ */
+data class OwedClerkGroup(
+    val currency: String,
+    val clerks: List<OwedClerkRow>,
+)
+
 data class HomeUiState(
     /** Active projects, each with a "Take attendance" shortcut (name + company). */
     val activeProjects: List<ProjectSummary> = emptyList(),
     /** Outstanding total per currency (positive balances only, never summed across currencies). */
     val outstanding: List<OutstandingTotal> = emptyList(),
-    /** Clerks who are owed money, sorted by amount owed descending. */
-    val owedClerks: List<OwedClerkRow> = emptyList(),
+    /** Clerks who are owed money, grouped per currency (never flat-sorted across currencies). */
+    val owedClerkGroups: List<OwedClerkGroup> = emptyList(),
     val isLoaded: Boolean = false,
 )
 
@@ -45,7 +58,8 @@ data class HomeUiState(
  * by folding the three money roll-ups into per-(project, clerk) balances (nothing stored) and
  * joining them with project and clerk names. Balances are drawn across ALL projects, not just
  * active ones — a completed project can still have open books. Cross-currency amounts are never
- * summed (LOCKED); each currency stands alone.
+ * summed OR compared (LOCKED); each currency stands alone, both in the outstanding totals and in
+ * the owed-clerks groups.
  */
 class HomeViewModel(
     projectDao: ProjectDao,
@@ -71,7 +85,13 @@ class HomeViewModel(
         val projectNameById = allProjects.associate { it.id to it.name }
         val clerkNameById = clerks.associate { it.id to it.name }
 
-        val owedClerks = balanceList
+        val outstanding = BalanceCalculator.outstandingByCurrency(balanceList, currencyByProject)
+
+        // Group per currency first, THEN sort descending within each group — the flat
+        // cross-currency sort this replaces compared LBP minor units against USD minor units
+        // as if they were the same money. Group order mirrors [outstanding] so both sections
+        // agree on which currency comes first.
+        val owedRowsByCurrency = balanceList
             .filter { it.owed > 0L }
             .map { balance ->
                 OwedClerkRow(
@@ -83,12 +103,18 @@ class HomeViewModel(
                     currency = currencyByProject[balance.projectId].orEmpty(),
                 )
             }
-            .sortedByDescending { it.owed }
+            .groupBy { it.currency }
+        val owedClerkGroups = outstanding.map { total ->
+            OwedClerkGroup(
+                currency = total.currency,
+                clerks = owedRowsByCurrency[total.currency].orEmpty().sortedByDescending { it.owed },
+            )
+        }
 
         HomeUiState(
             activeProjects = activeProjects,
-            outstanding = BalanceCalculator.outstandingByCurrency(balanceList, currencyByProject),
-            owedClerks = owedClerks,
+            outstanding = outstanding,
+            owedClerkGroups = owedClerkGroups,
             isLoaded = true,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), HomeUiState())

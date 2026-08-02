@@ -41,7 +41,6 @@ import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.data.local.ExtraPayLineEntity
-import com.vague.crewtally.data.local.RoomAttendanceWriter
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyCheckboxRow
 import com.vague.crewtally.ui.components.CrewTallySegmentedControl
@@ -85,7 +84,7 @@ fun AttendanceExtrasScreen(
             rateSnapshot = rateMinorUnits,
             attendanceEntryDao = database.attendanceEntryDao(),
             extraPayLineDao = database.extraPayLineDao(),
-            attendanceWriter = RoomAttendanceWriter(database),
+            attendanceWriter = application.attendanceWriter,
         ),
     )
 

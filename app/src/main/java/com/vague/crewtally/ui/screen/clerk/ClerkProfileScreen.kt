@@ -152,9 +152,11 @@ private fun CurrencyTotalCard(total: CurrencyTotal, modifier: Modifier = Modifie
     val earnedLabel = stringResource(R.string.profile_earned_label)
     val paidLabel = stringResource(R.string.profile_paid_label)
     val owedLabel = stringResource(R.string.profile_owed_label)
+    // Spoken form uses the full currency name ("US Dollar") — the visible label below stays
+    // the 3-letter code, which a screen reader would otherwise spell out letter by letter.
     val cardDescription = stringResource(
         R.string.profile_currency_total_description,
-        total.currency,
+        CurrencyCodes.displayNameFor(total.currency),
         earnedText,
         paidText,
         owedText,

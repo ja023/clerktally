@@ -28,6 +28,16 @@ object CurrencyCodes {
     fun symbolFor(code: String): String =
         COMMON.find { it.code.equals(code, ignoreCase = true) }?.symbol ?: "$code "
 
+    /**
+     * A spoken-friendly currency name for accessibility, e.g. "US Dollar" for "USD" — a screen
+     * reader spelling out a bare 3-letter code letter-by-letter is not useful. Visible labels
+     * stay the code itself; this is for contentDescriptions only. A project's currency is
+     * free-typed (LOCKED Phase 2 decision), so an unrecognized or malformed code must never
+     * crash — [runCatching] falls back to the raw code unchanged.
+     */
+    fun displayNameFor(code: String): String =
+        runCatching { java.util.Currency.getInstance(code).displayName }.getOrDefault(code)
+
     /** Whether [code] (expected already trimmed + uppercased) is a well-formed ISO 4217 code. */
     fun isValidCode(code: String): Boolean = CODE_PATTERN.matches(code)
 }

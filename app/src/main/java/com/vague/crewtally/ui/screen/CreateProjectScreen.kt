@@ -15,7 +15,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -28,7 +27,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
-import com.vague.crewtally.data.local.RoomProjectRosterWriter
 import com.vague.crewtally.ui.viewmodel.CreateProjectEvent
 import com.vague.crewtally.ui.viewmodel.CreateProjectStep
 import com.vague.crewtally.ui.viewmodel.CreateProjectViewModel
@@ -49,7 +47,7 @@ fun CreateProjectScreen(navController: NavController, modifier: Modifier = Modif
             companyDao = database.companyDao(),
             clerkDao = database.clerkDao(),
             rosterEntryDao = database.rosterEntryDao(),
-            writer = remember { RoomProjectRosterWriter(database) },
+            writer = application.projectRosterWriter,
         ),
     )
     val state by viewModel.state.collectAsStateWithLifecycle()

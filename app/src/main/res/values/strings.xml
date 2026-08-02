@@ -159,6 +159,7 @@
 
     <!-- Attendance daily loop (Phase 3) -->
     <string name="project_take_attendance">Take attendance</string>
+    <string name="project_take_attendance_for">Take attendance for %1$s</string>
     <string name="attendance_title">Attendance</string>
     <string name="attendance_prev_day">Previous day</string>
     <string name="attendance_next_day">Next day</string>
@@ -255,7 +256,9 @@
     <string name="payment_advance_confirm_title">Record as advance?</string>
     <string name="payment_advance_confirm_body">This is %1$s more than owed. Record the extra as an advance?</string>
     <string name="payment_edit_confirm_title">Save this change?</string>
+    <string name="payment_edit_confirm_unchanged_body">The payment amount is unchanged. Save the edited details?</string>
     <string name="payment_delete_confirm_title">Delete this payment?</string>
+    <string name="payment_amount_prefill_hint">Pre-filled with the full amount owed. Lower it for a partial payment.</string>
 
     <!-- Home dashboard (Phase 4) -->
     <string name="home_active_projects_heading">Active projects</string>

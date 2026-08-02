@@ -26,8 +26,9 @@ import org.junit.Test
 
 /**
  * Headless tests for [HomeViewModel]: the active-projects section, the outstanding total per
- * currency (positive only, never summed across currencies), the owed-clerks list sorted by
- * amount, and the empty state.
+ * currency (positive only, never summed across currencies), the owed-clerks groups (one group
+ * per currency, sorted by amount owed descending WITHIN each group, group order matching the
+ * outstanding totals), and the empty state.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
@@ -114,18 +115,73 @@ class HomeViewModelTest {
     }
 
     @Test
-    fun `owed clerks are sorted by amount descending and settled clerks are excluded`() = runTest {
+    fun `owed clerks are grouped per currency, in the same order as outstanding totals, and settled clerks are excluded`() = runTest {
         seedDashboard()
         val vm = buildViewModel()
         var latest = HomeUiState()
         val job = launch(Dispatchers.Unconfined) { vm.uiState.collect { latest = it } }
 
-        // c1@p2 (5000) before c1@p1 (3000); c2 (settled) absent.
-        assertEquals(2, latest.owedClerks.size)
-        assertEquals(5000L, latest.owedClerks[0].owed)
-        assertEquals("p2", latest.owedClerks[0].projectId)
-        assertEquals("Ali", latest.owedClerks[0].clerkName)
-        assertEquals(3000L, latest.owedClerks[1].owed)
+        // Outstanding: EUR 5000 (c1@p2), USD 3000 (c1@p1) -> EUR group first (5000 > 3000).
+        assertEquals(2, latest.owedClerkGroups.size)
+
+        val eurGroup = latest.owedClerkGroups[0]
+        assertEquals("EUR", eurGroup.currency)
+        assertEquals(1, eurGroup.clerks.size)
+        assertEquals(5000L, eurGroup.clerks[0].owed)
+        assertEquals("p2", eurGroup.clerks[0].projectId)
+        assertEquals("Ali", eurGroup.clerks[0].clerkName)
+
+        val usdGroup = latest.owedClerkGroups[1]
+        assertEquals("USD", usdGroup.currency)
+        assertEquals(1, usdGroup.clerks.size)
+        assertEquals(3000L, usdGroup.clerks[0].owed)
+
+        // c2 (settled at p1) never appears in any group.
+        assertTrue(latest.owedClerkGroups.none { group -> group.clerks.any { it.clerkId == "c2" } })
+
+        job.cancel()
+    }
+
+    @Test
+    fun `multiple owed clerks in the same currency are sorted by amount descending within their group`() = runTest {
+        projectDao.companyNames = mapOf("co1" to "Acme")
+        projectDao.seed(
+            ProjectEntity(id = "p1", companyId = "co1", name = "Warehouse", startDate = jan1, currency = "USD", status = ProjectStatus.ACTIVE),
+            ProjectEntity(id = "p2", companyId = "co1", name = "Stocktake", startDate = jan1, currency = "USD", status = ProjectStatus.ACTIVE),
+            ProjectEntity(id = "p3", companyId = "co1", name = "Audit", startDate = jan1, currency = "EUR", status = ProjectStatus.ACTIVE),
+        )
+        clerkDao.seed(
+            ClerkEntity(id = "c1", name = "Ali"),
+            ClerkEntity(id = "c2", name = "Sam"),
+            ClerkEntity(id = "c3", name = "Rana"),
+        )
+        attendanceEntryDao.seed(
+            AttendanceEntryEntity("a1", "p1", "c1", jan1, present = true, rateSnapshot = 3000), // USD c1 owed 3000
+            AttendanceEntryEntity("a2", "p2", "c2", jan1, present = true, rateSnapshot = 1000), // USD c2 owed 1000
+            AttendanceEntryEntity("a3", "p3", "c3", jan1, present = true, rateSnapshot = 5000), // EUR c3 owed 5000
+        )
+
+        val vm = buildViewModel()
+        var latest = HomeUiState()
+        val job = launch(Dispatchers.Unconfined) { vm.uiState.collect { latest = it } }
+
+        // Outstanding: USD 4000 (3000+1000), EUR 5000 -> EUR group first (5000 > 4000), even
+        // though USD has more owed CLERKS — group order follows the currency TOTAL, not count.
+        assertEquals(2, latest.owedClerkGroups.size)
+
+        val eurGroup = latest.owedClerkGroups[0]
+        assertEquals("EUR", eurGroup.currency)
+        assertEquals(1, eurGroup.clerks.size)
+        assertEquals(5000L, eurGroup.clerks[0].owed)
+
+        val usdGroup = latest.owedClerkGroups[1]
+        assertEquals("USD", usdGroup.currency)
+        assertEquals(2, usdGroup.clerks.size)
+        // Sorted descending WITHIN the USD group, never compared against the EUR figures.
+        assertEquals("c1", usdGroup.clerks[0].clerkId)
+        assertEquals(3000L, usdGroup.clerks[0].owed)
+        assertEquals("c2", usdGroup.clerks[1].clerkId)
+        assertEquals(1000L, usdGroup.clerks[1].owed)
 
         job.cancel()
     }
@@ -139,7 +195,7 @@ class HomeViewModelTest {
         assertTrue(latest.isLoaded)
         assertTrue(latest.activeProjects.isEmpty())
         assertTrue(latest.outstanding.isEmpty())
-        assertTrue(latest.owedClerks.isEmpty())
+        assertTrue(latest.owedClerkGroups.isEmpty())
 
         job.cancel()
     }

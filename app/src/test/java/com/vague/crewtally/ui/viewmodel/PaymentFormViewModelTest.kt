@@ -3,6 +3,7 @@ package com.vague.crewtally.ui.viewmodel
 import com.vague.crewtally.data.local.AttendanceEntryEntity
 import com.vague.crewtally.data.local.PaymentEntity
 import com.vague.crewtally.data.local.PaymentWriter
+import com.vague.crewtally.data.local.ProjectDao
 import com.vague.crewtally.data.local.ProjectEntity
 import com.vague.crewtally.testutil.FakeAttendanceEntryDao
 import com.vague.crewtally.testutil.FakeExtraPayLineDao
@@ -13,12 +14,15 @@ import java.time.LocalDate
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -27,8 +31,10 @@ import org.junit.Test
 
 /**
  * Headless tests for [PaymentFormViewModel]: the paid-in-full pre-fill, the advance-confirm
- * threshold, the edit/delete balance-impact prompts, and the double-tap re-entrancy guard that
- * makes a fast double tap record exactly one payment.
+ * threshold, the edit/delete balance-impact prompts (including the no-change variant for a
+ * note-only edit), the isLoaded guard that blocks a save/delete fired before the real balance
+ * has loaded, and the double-tap re-entrancy guard that makes a fast double tap record exactly
+ * one payment.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PaymentFormViewModelTest {
@@ -139,6 +145,76 @@ class PaymentFormViewModelTest {
     }
 
     @Test
+    fun `editing only the note leaves the amount unchanged and the confirm reflects that`() = runTest {
+        paymentDao.seed(PaymentEntity("pay1", "p1", "c1", jan1, 4000, "old note"))
+        val vm = newForm(paymentId = "pay1")
+
+        // Amount input is left exactly as pre-filled; only the note changes.
+        vm.onEvent(PaymentFormEvent.NoteChanged("updated note"))
+        vm.onEvent(PaymentFormEvent.Save)
+
+        val prompt = vm.state.value.editConfirm
+        assertNotNull("a note-only edit must still confirm before saving", prompt)
+        assertEquals(
+            "an unchanged amount must produce a from == to prompt (the no-change confirm variant)",
+            prompt!!.fromOwed,
+            prompt.toOwed,
+        )
+        assertEquals(0, writer.updateCallCount)
+
+        vm.onEvent(PaymentFormEvent.ConfirmEdit)
+        assertEquals(1, writer.updateCallCount)
+    }
+
+    @Test
+    fun `save fired before context has loaded does not write`() = runTest {
+        // A ProjectDao whose observeById never emits keeps PaymentFormViewModel#context stuck
+        // at its unloaded default forever — simulating a fast tap that lands before the real
+        // balance/payment query results arrive. Without the isLoaded guard, an edit-screen save
+        // in this state would fall through to the "record new" branch (existing == null) and
+        // silently create a duplicate payment instead of updating the one being edited.
+        val neverLoadingProjectDao = NeverLoadingProjectDao(projectDao)
+        val vm = PaymentFormViewModel(
+            projectId = "p1",
+            clerkId = "c1",
+            paymentId = "pay1",
+            projectDao = neverLoadingProjectDao,
+            attendanceEntryDao = attendanceEntryDao,
+            extraPayLineDao = extraPayLineDao,
+            paymentDao = paymentDao,
+            writer = writer,
+        )
+
+        vm.onEvent(PaymentFormEvent.AmountChanged("50"))
+        vm.onEvent(PaymentFormEvent.Save)
+
+        assertEquals(0, writer.recordCallCount)
+        assertEquals(0, writer.updateCallCount)
+        assertFalse(vm.state.value.isSaving)
+        assertNull(vm.state.value.editConfirm)
+    }
+
+    @Test
+    fun `delete requested before context has loaded does not show a confirm`() = runTest {
+        val neverLoadingProjectDao = NeverLoadingProjectDao(projectDao)
+        val vm = PaymentFormViewModel(
+            projectId = "p1",
+            clerkId = "c1",
+            paymentId = "pay1",
+            projectDao = neverLoadingProjectDao,
+            attendanceEntryDao = attendanceEntryDao,
+            extraPayLineDao = extraPayLineDao,
+            paymentDao = paymentDao,
+            writer = writer,
+        )
+
+        vm.onEvent(PaymentFormEvent.RequestDelete)
+
+        assertNull(vm.state.value.deleteConfirm)
+        assertEquals(0, writer.deleteCallCount)
+    }
+
+    @Test
     fun `deleting confirms the balance impact then deletes`() = runTest {
         paymentDao.seed(PaymentEntity("pay1", "p1", "c1", jan1, 4000, ""))
         val vm = newForm(paymentId = "pay1")
@@ -198,4 +274,13 @@ private class GatedPaymentWriter(
     override suspend fun updatePayment(payment: PaymentEntity) = delegate.updatePayment(payment)
 
     override suspend fun deletePayment(payment: PaymentEntity) = delegate.deletePayment(payment)
+}
+
+/**
+ * A [ProjectDao] whose [observeById] never emits, so [PaymentFormViewModel.context] never
+ * completes its first combined emission and stays at its unloaded default forever — used to
+ * test the isLoaded guard on a save/delete that fires before the real query results arrive.
+ */
+private class NeverLoadingProjectDao(delegate: ProjectDao) : ProjectDao by delegate {
+    override fun observeById(id: String): Flow<ProjectEntity?> = MutableSharedFlow()
 }

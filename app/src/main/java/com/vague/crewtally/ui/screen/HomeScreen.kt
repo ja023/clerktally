@@ -1,6 +1,7 @@
 package com.vague.crewtally.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,11 +9,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -35,6 +38,7 @@ import com.vague.crewtally.ui.theme.CrewTallyShape
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.theme.CrewTallyType
 import com.vague.crewtally.ui.viewmodel.HomeViewModel
+import com.vague.crewtally.ui.viewmodel.OwedClerkGroup
 import com.vague.crewtally.ui.viewmodel.OwedClerkRow
 import com.vague.crewtally.util.CurrencyCodes
 import com.vague.crewtally.util.Money
@@ -60,6 +64,7 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
         ),
     )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val loadingDescription = stringResource(R.string.cd_loading)
 
     Column(modifier = modifier.fillMaxSize()) {
         Text(
@@ -71,7 +76,16 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
                 .semantics { heading() },
         )
 
-        if (state.isLoaded && state.activeProjects.isEmpty() && state.owedClerks.isEmpty() && state.outstanding.isEmpty()) {
+        // Gate on the first Room emission so the empty-state copy can't flash before real data
+        // arrives (mirrors the balance and profile screens' isLoaded gating).
+        if (!state.isLoaded) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = loadingDescription })
+            }
+            return@Column
+        }
+
+        if (state.activeProjects.isEmpty() && state.owedClerkGroups.isEmpty() && state.outstanding.isEmpty()) {
             CrewTallyEmptyState(
                 title = stringResource(R.string.home_no_projects_title),
                 body = stringResource(R.string.home_no_projects_body),
@@ -123,16 +137,24 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
             item(key = "owed-heading") {
                 SectionHeading(stringResource(R.string.home_owed_heading))
             }
-            if (state.owedClerks.isEmpty()) {
+            if (state.owedClerkGroups.isEmpty()) {
                 item(key = "owed-empty") {
                     SectionEmptyLine(stringResource(R.string.home_all_settled))
                 }
             } else {
-                items(state.owedClerks, key = { "owed-${it.projectId}-${it.clerkId}" }) { row ->
-                    OwedClerkListRow(
-                        row = row,
-                        onClick = { navController.navigate(MoneyRoutes.balance(row.projectId, row.clerkId)) },
-                    )
+                // One subheader per currency (same order as the outstanding totals above),
+                // clerks sorted by amount owed descending WITHIN that currency only — comparing
+                // raw amounts across currencies would be meaningless (LOCKED).
+                state.owedClerkGroups.forEach { group ->
+                    item(key = "owed-currency-${group.currency}") {
+                        CurrencySubheading(group.currency)
+                    }
+                    items(group.clerks, key = { "owed-${it.projectId}-${it.clerkId}" }) { row ->
+                        OwedClerkListRow(
+                            row = row,
+                            onClick = { navController.navigate(MoneyRoutes.balance(row.projectId, row.clerkId)) },
+                        )
+                    }
                 }
             }
         }
@@ -157,6 +179,19 @@ private fun SectionEmptyLine(text: String) {
         text = text,
         style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/** A currency-code subheader grouping one currency's owed-clerks rows underneath it. */
+@Composable
+private fun CurrencySubheading(currency: String) {
+    Text(
+        text = currency,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .padding(top = CrewTallyTheme.dimens.spaceXs)
+            .semantics { heading() },
     )
 }
 
@@ -205,6 +240,7 @@ private fun ActiveProjectCard(
             CrewTallyButton(
                 text = stringResource(R.string.project_take_attendance),
                 onClick = onTakeAttendance,
+                contentDescription = stringResource(R.string.project_take_attendance_for, summary.project.name),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -225,7 +261,9 @@ private fun OutstandingCard(total: OutstandingTotal, modifier: Modifier = Modifi
                 .fillMaxWidth()
                 .padding(CrewTallyTheme.dimens.spaceLg)
                 .semantics(mergeDescendants = true) {
-                    contentDescription = "${total.currency}. $amountText"
+                    // Spoken form uses the full currency name ("US Dollar") — the visible label
+                    // stays the 3-letter code, which a screen reader would otherwise spell out.
+                    contentDescription = "${CurrencyCodes.displayNameFor(total.currency)}. $amountText"
                 },
             verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceXs),
         ) {

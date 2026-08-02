@@ -34,7 +34,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
-import com.vague.crewtally.data.local.RoomPaymentWriter
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyConfirmDialog
 import com.vague.crewtally.ui.components.CrewTallyDateField
@@ -50,7 +49,9 @@ import com.vague.crewtally.util.Money
  * The full-screen payment form (LOCKED forms are full-screen pages), for recording a new payment
  * and editing/deleting an existing one. A new payment pre-fills the FULL owed (paid in full),
  * editable down for a partial; overpaying prompts an advance confirm. Editing or deleting shows
- * the balance impact ("<clerk>'s balance changes from X to Y") before it applies.
+ * the balance impact ("<clerk>'s balance changes from X to Y") before it applies — unless the
+ * amount itself didn't change (e.g. a note-only edit), in which case the confirm says so plainly
+ * instead of claiming a balance change that never happens.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +74,7 @@ fun PaymentFormScreen(
             attendanceEntryDao = database.attendanceEntryDao(),
             extraPayLineDao = database.extraPayLineDao(),
             paymentDao = database.paymentDao(),
-            writer = RoomPaymentWriter(database),
+            writer = application.paymentWriter,
         ),
     )
 
@@ -118,7 +119,13 @@ fun PaymentFormScreen(
                 onValueChange = { viewModel.onEvent(PaymentFormEvent.AmountChanged(it)) },
                 leadingText = symbol,
                 isError = state.amountError,
-                supportingText = if (state.amountError) stringResource(R.string.payment_amount_error) else null,
+                supportingText = when {
+                    state.amountError -> stringResource(R.string.payment_amount_error)
+                    // Recording (not editing) pre-fills the full owed amount — explain that so
+                    // the number isn't mistaken for something the app is charging by default.
+                    !state.isEditing -> stringResource(R.string.payment_amount_prefill_hint)
+                    else -> null
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             )
 
@@ -139,13 +146,17 @@ fun PaymentFormScreen(
             CrewTallyButton(
                 text = stringResource(R.string.payment_save),
                 onClick = { viewModel.onEvent(PaymentFormEvent.Save) },
-                enabled = !state.isSaving,
+                // Disabled until the real balance/payment has loaded — a tap that lands before
+                // then would race the "record new" vs. "update existing" branch (see
+                // PaymentFormViewModel.onSave's isLoaded guard).
+                enabled = !state.isSaving && context.isLoaded,
                 modifier = Modifier.fillMaxWidth(),
             )
 
             if (state.isEditing) {
                 TextButton(
                     onClick = { viewModel.onEvent(PaymentFormEvent.RequestDelete) },
+                    enabled = context.isLoaded,
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.fillMaxWidth().heightIn(min = CrewTallyTheme.dimens.minTarget),
                 ) {
@@ -168,16 +179,23 @@ fun PaymentFormScreen(
         )
     }
 
-    // Balance-impact confirm for an edit save.
+    // Balance-impact confirm for an edit save. When the amount didn't change (e.g. a note-only
+    // edit), fromOwed == toOwed and "changes from X to Y" would misleadingly claim a balance
+    // change that never happens — swap in a plain unchanged-amount confirm instead.
     state.editConfirm?.let { prompt ->
+        val amountUnchanged = prompt.fromOwed == prompt.toOwed
         CrewTallyConfirmDialog(
             title = stringResource(R.string.payment_edit_confirm_title),
-            body = stringResource(
-                R.string.balance_impact_body,
-                clerkName,
-                owedDisplayText(prompt.fromOwed, symbol),
-                owedDisplayText(prompt.toOwed, symbol),
-            ),
+            body = if (amountUnchanged) {
+                stringResource(R.string.payment_edit_confirm_unchanged_body)
+            } else {
+                stringResource(
+                    R.string.balance_impact_body,
+                    clerkName,
+                    owedDisplayText(prompt.fromOwed, symbol),
+                    owedDisplayText(prompt.toOwed, symbol),
+                )
+            },
             confirmLabel = stringResource(R.string.action_confirm),
             dismissLabel = stringResource(R.string.action_cancel),
             onConfirm = { viewModel.onEvent(PaymentFormEvent.ConfirmEdit) },

@@ -165,8 +165,10 @@ fun ClerkBalanceScreen(
 
 /**
  * The hero balance figure. A live region so a payment recorded on the payment form (which pops
- * back here) announces the new balance; the whole card carries one merged, human-phrased
- * description ("<amount> owed" / "Advance of <amount>" / "Paid in full") — never a red error.
+ * back here) announces the new balance; a heading so TalkBack's heading navigation can jump
+ * straight to it. The whole card carries one merged description — [owedDisplayText] is already
+ * a complete phrase ("Paid in full", "$150.00 owed"), so it is used as-is with no extra label
+ * prefix (a red error is never used for this figure — LOCKED #7).
  */
 @Composable
 private fun OwedFigureCard(owed: Long, currencySymbol: String, modifier: Modifier = Modifier) {
@@ -183,8 +185,9 @@ private fun OwedFigureCard(owed: Long, currencySymbol: String, modifier: Modifie
                 .fillMaxWidth()
                 .padding(CrewTallyTheme.dimens.spaceXl)
                 .semantics(mergeDescendants = true) {
+                    heading()
                     liveRegion = LiveRegionMode.Polite
-                    contentDescription = "$label. $display"
+                    contentDescription = display
                 },
             verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceXs),
         ) {

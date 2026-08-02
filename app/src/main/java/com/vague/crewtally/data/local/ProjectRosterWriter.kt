@@ -8,6 +8,10 @@ import java.util.UUID
  * moment with zero of its intended roster rows (or vice versa) if the app is killed
  * mid-save, so the write is one atomic unit rather than two separate DAO calls.
  *
+ * Every screen's ViewModel factory pulls [CrewTallyApplication.projectRosterWriter] (the ONE
+ * app-wide instance) rather than constructing its own `RoomProjectRosterWriter(database)`, for
+ * the same sharing reason [PaymentWriter] and [AttendanceWriter] do.
+ *
  * An interface (not a concrete class) so ViewModel tests can substitute an in-memory fake
  * instead of exercising a real Room transaction.
  */

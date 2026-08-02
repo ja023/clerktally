@@ -36,7 +36,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
-import com.vague.crewtally.data.local.RoomAttendanceWriter
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyConfirmDialog
 import com.vague.crewtally.ui.theme.CrewTallyShape
@@ -70,7 +69,7 @@ fun AttendanceDayScreen(
             rosterEntryDao = database.rosterEntryDao(),
             attendanceEntryDao = database.attendanceEntryDao(),
             extraPayLineDao = database.extraPayLineDao(),
-            attendanceWriter = RoomAttendanceWriter(database),
+            attendanceWriter = application.attendanceWriter,
         ),
     )
 

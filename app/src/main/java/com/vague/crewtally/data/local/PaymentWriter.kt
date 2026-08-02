@@ -12,7 +12,10 @@ import kotlinx.coroutines.sync.withLock
  * single transaction so a killed process can never leave a half-written payment, and every
  * method is serialized behind ONE writer-scoped [Mutex] (see [RoomPaymentWriter]) so writes
  * fired from different screens (the payment form and, later, a bulk settle) apply in tap order
- * instead of racing.
+ * instead of racing — which holds only because every screen's ViewModel factory pulls
+ * [CrewTallyApplication.paymentWriter] (the ONE app-wide instance) rather than constructing its
+ * own `RoomPaymentWriter(database)`; a screen that built its own would get its own private
+ * mutex, silently defeating this guarantee.
  *
  * An interface (not a concrete class) so ViewModel tests substitute an in-memory fake instead
  * of a real Room transaction.
@@ -52,6 +55,10 @@ class RoomPaymentWriter(private val database: CrewTallyDatabase) : PaymentWriter
         amount: Long,
         note: String,
     ) {
+        // Defense-in-depth: the ViewModel already blocks amount <= 0 before calling, but
+        // PaymentEntity.amount's own invariant ("always positive; direction is fixed") should
+        // hold at the write seam too, not just at whichever caller happens to check first.
+        require(amount > 0) { "Payment amount must be positive (minor units); got $amount." }
         mutex.withLock {
             database.withTransaction {
                 database.paymentDao().upsert(
@@ -69,6 +76,9 @@ class RoomPaymentWriter(private val database: CrewTallyDatabase) : PaymentWriter
     }
 
     override suspend fun updatePayment(payment: PaymentEntity) {
+        // Same invariant as recordPayment above — an edit must not be able to write a
+        // zero/negative amount into PaymentEntity.amount either.
+        require(payment.amount > 0) { "Payment amount must be positive (minor units); got ${payment.amount}." }
         mutex.withLock {
             database.withTransaction {
                 database.paymentDao().upsert(payment)
