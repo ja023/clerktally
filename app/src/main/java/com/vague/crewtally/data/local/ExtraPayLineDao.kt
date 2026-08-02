@@ -38,4 +38,46 @@ interface ExtraPayLineDao {
         """,
     )
     fun observeDayExtraTotals(projectId: String, date: LocalDate): Flow<List<AttendanceExtraTotal>>
+
+    /**
+     * Every extra-pay line for one clerk on one project, each carrying its day's date (joined
+     * from the carrier attendance entry), oldest first — the clerk balance screen's extras ledger.
+     */
+    @Query(
+        """
+        SELECT x.*, a.date AS date
+        FROM extra_pay_lines x
+        JOIN attendance_entries a ON a.id = x.attendanceEntryId
+        WHERE a.projectId = :projectId AND a.clerkId = :clerkId
+        ORDER BY a.date
+        """,
+    )
+    fun observeForClerkOnProject(projectId: String, clerkId: String): Flow<List<ExtraPayLineWithDate>>
+
+    /**
+     * Signed extras total per (project, clerk) across the whole book — the extras component of
+     * every Home balance. Each extra line belongs to exactly one attendance entry, which belongs
+     * to exactly one (project, clerk), so grouping by the entry's project+clerk never double-counts.
+     */
+    @Query(
+        """
+        SELECT a.projectId AS projectId, a.clerkId AS clerkId, SUM(x.amount) AS amount
+        FROM extra_pay_lines x
+        JOIN attendance_entries a ON a.id = x.attendanceEntryId
+        GROUP BY a.projectId, a.clerkId
+        """,
+    )
+    fun observeExtrasRollup(): Flow<List<ClerkProjectAmount>>
+
+    /** The same extras roll-up scoped to one clerk — the clerk profile's extras component. */
+    @Query(
+        """
+        SELECT a.projectId AS projectId, a.clerkId AS clerkId, SUM(x.amount) AS amount
+        FROM extra_pay_lines x
+        JOIN attendance_entries a ON a.id = x.attendanceEntryId
+        WHERE a.clerkId = :clerkId
+        GROUP BY a.projectId, a.clerkId
+        """,
+    )
+    fun observeExtrasRollupForClerk(clerkId: String): Flow<List<ClerkProjectAmount>>
 }

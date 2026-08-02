@@ -221,4 +221,60 @@
 
     <!-- Shared money accessibility (Phase 3 a11y) -->
     <string name="money_deduction_description">Deduction, %1$s</string>
+
+    <!-- Shared owed-figure phrasing (Phase 4) -->
+    <string name="owed_phrase_owed">%1$s owed</string>
+    <string name="owed_phrase_advance">Advance of %1$s</string>
+    <string name="owed_phrase_settled">Paid in full</string>
+
+    <!-- Clerk balance screen (Phase 4) -->
+    <string name="balance_owed_label">Owed</string>
+    <string name="balance_record_payment">Record payment</string>
+    <string name="balance_edit_rate">Edit daily rate</string>
+    <string name="balance_days_heading">Days worked</string>
+    <string name="balance_days_empty">No days worked yet.</string>
+    <string name="balance_day_present">Present</string>
+    <string name="balance_day_row_description">%1$s. Present. %2$s.</string>
+    <string name="balance_extras_heading">Extras</string>
+    <string name="balance_extras_empty">No extras yet.</string>
+    <string name="balance_extra_row_description">%1$s. %2$s. %3$s.</string>
+    <string name="balance_payments_heading">Payments</string>
+    <string name="balance_payments_empty">No payments recorded yet.</string>
+    <string name="balance_payment_row_description">%1$s. %2$s.</string>
+    <string name="balance_impact_body">%1$s\'s balance changes from %2$s to %3$s.</string>
+
+    <!-- Payment form (Phase 4) -->
+    <string name="payment_new_title">Record payment</string>
+    <string name="payment_edit_title">Edit payment</string>
+    <string name="payment_amount_label">Amount</string>
+    <string name="payment_amount_error">Enter an amount</string>
+    <string name="payment_date_label">Date</string>
+    <string name="payment_note_label">Note (optional)</string>
+    <string name="payment_save">Save payment</string>
+    <string name="payment_delete">Delete payment</string>
+    <string name="payment_advance_confirm_title">Record as advance?</string>
+    <string name="payment_advance_confirm_body">This is %1$s more than owed. Record the extra as an advance?</string>
+    <string name="payment_edit_confirm_title">Save this change?</string>
+    <string name="payment_delete_confirm_title">Delete this payment?</string>
+
+    <!-- Home dashboard (Phase 4) -->
+    <string name="home_active_projects_heading">Active projects</string>
+    <string name="home_no_active_projects">No active projects.</string>
+    <string name="home_no_projects_title">No projects yet</string>
+    <string name="home_no_projects_body">Create a project to start tracking attendance and pay.</string>
+    <string name="home_no_projects_cta">Add project</string>
+    <string name="home_outstanding_heading">Outstanding</string>
+    <string name="home_all_settled">All settled. Nobody is owed right now.</string>
+    <string name="home_owed_heading">Who\'s owed</string>
+    <string name="home_owed_row_description">%1$s. %2$s. %3$s owed.</string>
+
+    <!-- Clerk profile (Phase 4) -->
+    <string name="profile_totals_heading">Totals</string>
+    <string name="profile_projects_heading">Projects</string>
+    <string name="profile_empty">No activity yet. Add this clerk to a project to start tracking their pay.</string>
+    <string name="profile_earned_label">Earned</string>
+    <string name="profile_paid_label">Paid</string>
+    <string name="profile_owed_label">Owed</string>
+    <string name="profile_currency_total_description">%1$s. Earned %2$s. Paid %3$s. %4$s.</string>
+    <string name="profile_project_row_description">%1$s. %2$s.</string>
 </resources>

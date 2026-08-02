@@ -27,8 +27,8 @@ import com.vague.crewtally.ui.screen.AddRosterClerkScreen
 import com.vague.crewtally.ui.screen.CreateProjectScreen
 import com.vague.crewtally.ui.screen.EditProjectScreen
 import com.vague.crewtally.ui.screen.EditRosterRateScreen
+import com.vague.crewtally.ui.screen.HomeScreen
 import com.vague.crewtally.ui.screen.MoreScreen
-import com.vague.crewtally.ui.screen.PlaceholderScreen
 import com.vague.crewtally.ui.screen.ProjectDetailScreen
 import com.vague.crewtally.ui.screen.ProjectsScreen
 import com.vague.crewtally.ui.screen.attendance.AttendanceDayScreen
@@ -37,8 +37,12 @@ import com.vague.crewtally.ui.screen.attendance.AttendanceRoutes
 import com.vague.crewtally.ui.screen.attendance.AttendanceWalkInScreen
 import com.vague.crewtally.ui.screen.clerk.ClerkFormScreen
 import com.vague.crewtally.ui.screen.clerk.ClerkListScreen
+import com.vague.crewtally.ui.screen.clerk.ClerkProfileScreen
 import com.vague.crewtally.ui.screen.company.CompanyFormScreen
 import com.vague.crewtally.ui.screen.company.CompanyListScreen
+import com.vague.crewtally.ui.screen.money.ClerkBalanceScreen
+import com.vague.crewtally.ui.screen.money.MoneyRoutes
+import com.vague.crewtally.ui.screen.money.PaymentFormScreen
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import java.time.LocalDate
 
@@ -125,7 +129,7 @@ fun CrewTallyNavHost() {
             modifier = Modifier.padding(innerPadding),
         ) {
             composable(CrewTallyDestination.Home.route) {
-                PlaceholderScreen(title = stringResource(CrewTallyDestination.Home.labelRes))
+                HomeScreen(navController = navController)
             }
             composable(CrewTallyDestination.Projects.route) {
                 ProjectsScreen(navController = navController)
@@ -133,7 +137,7 @@ fun CrewTallyNavHost() {
             composable(CrewTallyDestination.Clerks.route) {
                 ClerkListScreen(
                     onAddClerk = { navController.navigate(CrewTallyRoutes.CLERK_NEW) },
-                    onEditClerk = { clerkId -> navController.navigate("clerks/$clerkId/edit") },
+                    onOpenClerk = { clerkId -> navController.navigate(MoneyRoutes.profile(clerkId)) },
                 )
             }
             composable(CrewTallyRoutes.CLERK_NEW) {
@@ -268,6 +272,67 @@ fun CrewTallyNavHost() {
                     projectId = arguments?.getString(AttendanceRoutes.PROJECT_ID).orEmpty(),
                     date = LocalDate.ofEpochDay(arguments?.getLong(AttendanceRoutes.EPOCH_DAY) ?: 0L),
                     currency = arguments?.getString(AttendanceRoutes.CURRENCY).orEmpty(),
+                    navController = navController,
+                )
+            }
+
+            // --- Phase 4: Payments + balances + profile ------------------------------
+            composable(
+                route = MoneyRoutes.PROFILE_TEMPLATE,
+                arguments = listOf(navArgument(MoneyRoutes.CLERK_ID) { type = NavType.StringType }),
+            ) { backStackEntry ->
+                ClerkProfileScreen(
+                    clerkId = backStackEntry.arguments?.getString(MoneyRoutes.CLERK_ID).orEmpty(),
+                    navController = navController,
+                    onEditClerk = { clerkId -> navController.navigate("clerks/$clerkId/edit") },
+                )
+            }
+            composable(
+                route = MoneyRoutes.BALANCE_TEMPLATE,
+                arguments = listOf(
+                    navArgument(MoneyRoutes.PROJECT_ID) { type = NavType.StringType },
+                    navArgument(MoneyRoutes.CLERK_ID) { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val arguments = backStackEntry.arguments
+                ClerkBalanceScreen(
+                    projectId = arguments?.getString(MoneyRoutes.PROJECT_ID).orEmpty(),
+                    clerkId = arguments?.getString(MoneyRoutes.CLERK_ID).orEmpty(),
+                    navController = navController,
+                )
+            }
+            composable(
+                route = MoneyRoutes.PAYMENT_NEW_TEMPLATE,
+                arguments = listOf(
+                    navArgument(MoneyRoutes.PROJECT_ID) { type = NavType.StringType },
+                    navArgument(MoneyRoutes.CLERK_ID) { type = NavType.StringType },
+                    navArgument(MoneyRoutes.CLERK_NAME) { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val arguments = backStackEntry.arguments
+                PaymentFormScreen(
+                    projectId = arguments?.getString(MoneyRoutes.PROJECT_ID).orEmpty(),
+                    clerkId = arguments?.getString(MoneyRoutes.CLERK_ID).orEmpty(),
+                    paymentId = null,
+                    clerkName = arguments?.getString(MoneyRoutes.CLERK_NAME).orEmpty(),
+                    navController = navController,
+                )
+            }
+            composable(
+                route = MoneyRoutes.PAYMENT_EDIT_TEMPLATE,
+                arguments = listOf(
+                    navArgument(MoneyRoutes.PROJECT_ID) { type = NavType.StringType },
+                    navArgument(MoneyRoutes.CLERK_ID) { type = NavType.StringType },
+                    navArgument(MoneyRoutes.PAYMENT_ID) { type = NavType.StringType },
+                    navArgument(MoneyRoutes.CLERK_NAME) { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val arguments = backStackEntry.arguments
+                PaymentFormScreen(
+                    projectId = arguments?.getString(MoneyRoutes.PROJECT_ID).orEmpty(),
+                    clerkId = arguments?.getString(MoneyRoutes.CLERK_ID).orEmpty(),
+                    paymentId = arguments?.getString(MoneyRoutes.PAYMENT_ID),
+                    clerkName = arguments?.getString(MoneyRoutes.CLERK_NAME).orEmpty(),
                     navController = navController,
                 )
             }

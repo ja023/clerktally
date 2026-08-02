@@ -4,6 +4,7 @@ import com.vague.crewtally.data.local.AttendanceDaySummary
 import com.vague.crewtally.data.local.AttendanceEntryDao
 import com.vague.crewtally.data.local.AttendanceEntryEntity
 import com.vague.crewtally.data.local.AttendanceRowWithName
+import com.vague.crewtally.data.local.ClerkProjectAmount
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,6 +78,23 @@ class FakeAttendanceEntryDao : AttendanceEntryDao {
     }
 
     override suspend fun getById(id: String): AttendanceEntryEntity? = entries.value.find { it.id == id }
+
+    override fun observeForClerkOnProject(projectId: String, clerkId: String): Flow<List<AttendanceEntryEntity>> =
+        entries.map { list ->
+            list.filter { it.projectId == projectId && it.clerkId == clerkId }.sortedBy { it.date }
+        }
+
+    override fun observeEarningsRollup(): Flow<List<ClerkProjectAmount>> =
+        entries.map { list -> earningsRollup(list) }
+
+    override fun observeEarningsRollupForClerk(clerkId: String): Flow<List<ClerkProjectAmount>> =
+        entries.map { list -> earningsRollup(list.filter { it.clerkId == clerkId }) }
+
+    private fun earningsRollup(list: List<AttendanceEntryEntity>): List<ClerkProjectAmount> =
+        list.groupBy { it.projectId to it.clerkId }
+            .map { (key, group) ->
+                ClerkProjectAmount(key.first, key.second, group.sumOf { if (it.present) it.rateSnapshot else 0L })
+            }
 
     override suspend fun countByClerk(clerkId: String): Int =
         entries.value.count { it.clerkId == clerkId }

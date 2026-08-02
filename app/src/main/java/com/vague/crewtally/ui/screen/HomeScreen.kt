@@ -1,0 +1,268 @@
+package com.vague.crewtally.ui.screen
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.vague.crewtally.CrewTallyApplication
+import com.vague.crewtally.R
+import com.vague.crewtally.balance.OutstandingTotal
+import com.vague.crewtally.data.local.ProjectSummary
+import com.vague.crewtally.ui.components.CrewTallyButton
+import com.vague.crewtally.ui.components.CrewTallyEmptyState
+import com.vague.crewtally.ui.components.CrewTallyListRow
+import com.vague.crewtally.ui.screen.attendance.AttendanceRoutes
+import com.vague.crewtally.ui.screen.money.MoneyRoutes
+import com.vague.crewtally.ui.theme.CrewTallyShape
+import com.vague.crewtally.ui.theme.CrewTallyTheme
+import com.vague.crewtally.ui.theme.CrewTallyType
+import com.vague.crewtally.ui.viewmodel.HomeViewModel
+import com.vague.crewtally.ui.viewmodel.OwedClerkRow
+import com.vague.crewtally.util.CurrencyCodes
+import com.vague.crewtally.util.Money
+import java.time.LocalDate
+
+/**
+ * The Home tab — a projects-first dashboard (LOCKED Phase 4). Active projects sit on top, each
+ * with a straight-to-today "Take attendance" shortcut; then the outstanding total per currency
+ * (one big number each, never summed across currencies); then the owed-clerks list sorted by
+ * amount, each opening that clerk's balance screen. Every section has its own empty state.
+ */
+@Composable
+fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
+    val application = LocalContext.current.applicationContext as CrewTallyApplication
+    val database = application.database
+    val viewModel: HomeViewModel = viewModel(
+        factory = HomeViewModel.factory(
+            projectDao = database.projectDao(),
+            clerkDao = database.clerkDao(),
+            attendanceEntryDao = database.attendanceEntryDao(),
+            extraPayLineDao = database.extraPayLineDao(),
+            paymentDao = database.paymentDao(),
+        ),
+    )
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    Column(modifier = modifier.fillMaxSize()) {
+        Text(
+            text = stringResource(R.string.nav_home),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier
+                .padding(horizontal = CrewTallyTheme.dimens.screenEdge, vertical = CrewTallyTheme.dimens.spaceLg)
+                .semantics { heading() },
+        )
+
+        if (state.isLoaded && state.activeProjects.isEmpty() && state.owedClerks.isEmpty() && state.outstanding.isEmpty()) {
+            CrewTallyEmptyState(
+                title = stringResource(R.string.home_no_projects_title),
+                body = stringResource(R.string.home_no_projects_body),
+                ctaLabel = stringResource(R.string.home_no_projects_cta),
+                onCtaClick = { navController.navigate("project/create") },
+            )
+            return@Column
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                horizontal = CrewTallyTheme.dimens.screenEdge,
+                vertical = CrewTallyTheme.dimens.spaceMd,
+            ),
+            verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceMd),
+        ) {
+            item(key = "active-projects-heading") {
+                SectionHeading(stringResource(R.string.home_active_projects_heading))
+            }
+            if (state.activeProjects.isEmpty()) {
+                item(key = "active-projects-empty") {
+                    SectionEmptyLine(stringResource(R.string.home_no_active_projects))
+                }
+            } else {
+                items(state.activeProjects, key = { "project-${it.project.id}" }) { summary ->
+                    ActiveProjectCard(
+                        summary = summary,
+                        onTakeAttendance = {
+                            navController.navigate(AttendanceRoutes.day(summary.project.id, LocalDate.now()))
+                        },
+                    )
+                }
+            }
+
+            item(key = "outstanding-heading") {
+                SectionHeading(stringResource(R.string.home_outstanding_heading))
+            }
+            if (state.outstanding.isEmpty()) {
+                item(key = "outstanding-empty") {
+                    SectionEmptyLine(stringResource(R.string.home_all_settled))
+                }
+            } else {
+                items(state.outstanding, key = { "currency-${it.currency}" }) { total ->
+                    OutstandingCard(total = total)
+                }
+            }
+
+            item(key = "owed-heading") {
+                SectionHeading(stringResource(R.string.home_owed_heading))
+            }
+            if (state.owedClerks.isEmpty()) {
+                item(key = "owed-empty") {
+                    SectionEmptyLine(stringResource(R.string.home_all_settled))
+                }
+            } else {
+                items(state.owedClerks, key = { "owed-${it.projectId}-${it.clerkId}" }) { row ->
+                    OwedClerkListRow(
+                        row = row,
+                        onClick = { navController.navigate(MoneyRoutes.balance(row.projectId, row.clerkId)) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionHeading(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.onBackground,
+        modifier = Modifier
+            .padding(top = CrewTallyTheme.dimens.spaceSm)
+            .semantics { heading() },
+    )
+}
+
+@Composable
+private fun SectionEmptyLine(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun ActiveProjectCard(
+    summary: ProjectSummary,
+    onTakeAttendance: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = CrewTallyShape.card,
+        tonalElevation = CrewTallyTheme.dimens.elevationCard,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(CrewTallyTheme.dimens.spaceLg),
+            verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceMd),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = if (summary.companyName.isBlank()) {
+                            summary.project.name
+                        } else {
+                            "${summary.project.name}. ${summary.companyName}"
+                        }
+                    },
+                verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceXxs),
+            ) {
+                Text(
+                    text = summary.project.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.semantics { heading() },
+                )
+                if (summary.companyName.isNotBlank()) {
+                    Text(
+                        text = summary.companyName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            CrewTallyButton(
+                text = stringResource(R.string.project_take_attendance),
+                onClick = onTakeAttendance,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun OutstandingCard(total: OutstandingTotal, modifier: Modifier = Modifier) {
+    val amountText = Money.formatWithSymbol(total.amount, CurrencyCodes.symbolFor(total.currency))
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = CrewTallyShape.card,
+        tonalElevation = CrewTallyTheme.dimens.elevationCard,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(CrewTallyTheme.dimens.spaceLg)
+                .semantics(mergeDescendants = true) {
+                    contentDescription = "${total.currency}. $amountText"
+                },
+            verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceXs),
+        ) {
+            Text(
+                text = total.currency,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = amountText,
+                style = CrewTallyType.moneyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+@Composable
+private fun OwedClerkListRow(row: OwedClerkRow, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val amountText = Money.formatWithSymbol(row.owed, CurrencyCodes.symbolFor(row.currency))
+    CrewTallyListRow(
+        title = row.clerkName,
+        subtitle = row.projectName,
+        onClick = onClick,
+        contentDescription = stringResource(
+            R.string.home_owed_row_description,
+            row.clerkName,
+            row.projectName,
+            amountText,
+        ),
+        trailing = {
+            Text(
+                text = amountText,
+                style = CrewTallyType.moneyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        },
+        modifier = modifier,
+    )
+}

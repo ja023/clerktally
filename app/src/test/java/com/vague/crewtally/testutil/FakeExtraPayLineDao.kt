@@ -1,8 +1,10 @@
 package com.vague.crewtally.testutil
 
 import com.vague.crewtally.data.local.AttendanceExtraTotal
+import com.vague.crewtally.data.local.ClerkProjectAmount
 import com.vague.crewtally.data.local.ExtraPayLineDao
 import com.vague.crewtally.data.local.ExtraPayLineEntity
+import com.vague.crewtally.data.local.ExtraPayLineWithDate
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +44,34 @@ class FakeExtraPayLineDao(private val attendance: FakeAttendanceEntryDao) : Extr
                 .groupBy { it.attendanceEntryId }
                 .map { (entryId, group) -> AttendanceExtraTotal(entryId, group.sumOf { it.amount }) }
         }
+
+    override fun observeForClerkOnProject(projectId: String, clerkId: String): Flow<List<ExtraPayLineWithDate>> =
+        combine(lines, attendance.entries) { list, entries ->
+            val matchingEntries = entries
+                .filter { it.projectId == projectId && it.clerkId == clerkId }
+                .associateBy { it.id }
+            list.mapNotNull { line ->
+                matchingEntries[line.attendanceEntryId]?.let { ExtraPayLineWithDate(line, it.date) }
+            }.sortedBy { it.date }
+        }
+
+    override fun observeExtrasRollup(): Flow<List<ClerkProjectAmount>> =
+        combine(lines, attendance.entries) { list, entries -> extrasRollup(list, entries) }
+
+    override fun observeExtrasRollupForClerk(clerkId: String): Flow<List<ClerkProjectAmount>> =
+        combine(lines, attendance.entries) { list, entries ->
+            extrasRollup(list, entries.filter { it.clerkId == clerkId })
+        }
+
+    private fun extrasRollup(
+        list: List<ExtraPayLineEntity>,
+        entries: List<com.vague.crewtally.data.local.AttendanceEntryEntity>,
+    ): List<ClerkProjectAmount> {
+        val entryById = entries.associateBy { it.id }
+        return list.mapNotNull { line -> entryById[line.attendanceEntryId]?.let { it to line.amount } }
+            .groupBy { (entry, _) -> entry.projectId to entry.clerkId }
+            .map { (key, group) -> ClerkProjectAmount(key.first, key.second, group.sumOf { it.second }) }
+    }
 
     /** Simulates FK CASCADE: called from [FakeAttendanceEntryDao.delete] when an entry is removed. */
     fun deleteForAttendance(attendanceEntryId: String) {

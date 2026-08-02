@@ -42,6 +42,7 @@ import com.vague.crewtally.data.local.ProjectStatus
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyConfirmDialog
 import com.vague.crewtally.ui.screen.attendance.AttendanceRoutes
+import com.vague.crewtally.ui.screen.money.MoneyRoutes
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.viewmodel.ProjectDetailViewModel
 import com.vague.crewtally.util.CurrencyCodes
@@ -131,12 +132,9 @@ fun ProjectDetailScreen(projectId: String, navController: NavController, modifie
                         navController.navigate("project/$projectId/roster/add/$encodedCurrency")
                     },
                     onRowClick = { row ->
-                        val encodedName = Uri.encode(row.clerkName)
-                        val encodedCurrency = Uri.encode(currentProject.currency)
-                        navController.navigate(
-                            "project/$projectId/roster/${row.entry.id}/edit/${row.entry.clerkId}/" +
-                                "$encodedName/${row.entry.dailyRate}/$encodedCurrency",
-                        )
+                        // Tapping a roster clerk opens their per-project balance (LOCKED Phase 4).
+                        // Rate editing moved onto that balance screen as a secondary action.
+                        navController.navigate(MoneyRoutes.balance(projectId, row.entry.clerkId))
                     },
                 )
 

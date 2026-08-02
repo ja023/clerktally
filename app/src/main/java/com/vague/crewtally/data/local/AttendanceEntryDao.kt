@@ -70,6 +70,41 @@ interface AttendanceEntryDao {
     @Query("SELECT * FROM attendance_entries WHERE id = :id")
     suspend fun getById(id: String): AttendanceEntryEntity?
 
+    /**
+     * Every attendance row for one clerk on one project, oldest first — the clerk balance
+     * screen's raw day ledger (it renders the present days and derives earnings from them).
+     */
+    @Query(
+        "SELECT * FROM attendance_entries WHERE projectId = :projectId AND clerkId = :clerkId ORDER BY date",
+    )
+    fun observeForClerkOnProject(projectId: String, clerkId: String): Flow<List<AttendanceEntryEntity>>
+
+    /**
+     * Earned per (project, clerk) across the whole book: Σ of the rate snapshot over PRESENT
+     * rows only (absent rows earn nothing). The earnings component of every Home balance.
+     */
+    @Query(
+        """
+        SELECT projectId AS projectId, clerkId AS clerkId,
+               SUM(CASE WHEN present THEN rateSnapshot ELSE 0 END) AS amount
+        FROM attendance_entries
+        GROUP BY projectId, clerkId
+        """,
+    )
+    fun observeEarningsRollup(): Flow<List<ClerkProjectAmount>>
+
+    /** The same earnings roll-up scoped to one clerk — the clerk profile's earnings component. */
+    @Query(
+        """
+        SELECT projectId AS projectId, clerkId AS clerkId,
+               SUM(CASE WHEN present THEN rateSnapshot ELSE 0 END) AS amount
+        FROM attendance_entries
+        WHERE clerkId = :clerkId
+        GROUP BY projectId, clerkId
+        """,
+    )
+    fun observeEarningsRollupForClerk(clerkId: String): Flow<List<ClerkProjectAmount>>
+
     /** Used by the clerk delete-eligibility check (Phase 1): an attendance row is history. */
     @Query("SELECT COUNT(*) FROM attendance_entries WHERE clerkId = :clerkId")
     suspend fun countByClerk(clerkId: String): Int

@@ -52,7 +52,7 @@ import com.vague.crewtally.ui.util.crewTallyDatabase
 @Composable
 fun ClerkListScreen(
     onAddClerk: () -> Unit,
-    onEditClerk: (String) -> Unit,
+    onOpenClerk: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ClerkListViewModel = viewModel(
         factory = ClerkListViewModel.factory(LocalContext.current.crewTallyDatabase().clerkDao()),
@@ -113,7 +113,7 @@ fun ClerkListScreen(
                         }
                     }
                     items(uiState.activeClerks, key = { it.id }) { clerk ->
-                        ClerkRowItem(clerk = clerk, onClick = { onEditClerk(clerk.id) })
+                        ClerkRowItem(clerk = clerk, onClick = { onOpenClerk(clerk.id) })
                     }
 
                     item {
@@ -133,7 +133,7 @@ fun ClerkListScreen(
                             )
                         }
                         items(uiState.archivedClerks, key = { it.id }) { clerk ->
-                            ClerkRowItem(clerk = clerk, isArchived = true, onClick = { onEditClerk(clerk.id) })
+                            ClerkRowItem(clerk = clerk, isArchived = true, onClick = { onOpenClerk(clerk.id) })
                         }
                     }
                 }

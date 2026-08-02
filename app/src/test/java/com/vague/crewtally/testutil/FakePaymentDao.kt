@@ -1,5 +1,6 @@
 package com.vague.crewtally.testutil
 
+import com.vague.crewtally.data.local.ClerkProjectAmount
 import com.vague.crewtally.data.local.PaymentDao
 import com.vague.crewtally.data.local.PaymentEntity
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +28,21 @@ class FakePaymentDao : PaymentDao {
 
     override fun observeByClerk(clerkId: String): Flow<List<PaymentEntity>> =
         payments.map { list -> list.filter { it.clerkId == clerkId } }
+
+    override fun observeById(id: String): Flow<PaymentEntity?> =
+        payments.map { list -> list.find { it.id == id } }
+
+    override suspend fun getById(id: String): PaymentEntity? = payments.value.find { it.id == id }
+
+    override fun observePaymentsRollup(): Flow<List<ClerkProjectAmount>> =
+        payments.map { list -> rollup(list) }
+
+    override fun observePaymentsRollupForClerk(clerkId: String): Flow<List<ClerkProjectAmount>> =
+        payments.map { list -> rollup(list.filter { it.clerkId == clerkId }) }
+
+    private fun rollup(list: List<PaymentEntity>): List<ClerkProjectAmount> =
+        list.groupBy { it.projectId to it.clerkId }
+            .map { (key, group) -> ClerkProjectAmount(key.first, key.second, group.sumOf { it.amount }) }
 
     override suspend fun countByClerk(clerkId: String): Int =
         payments.value.count { it.clerkId == clerkId }

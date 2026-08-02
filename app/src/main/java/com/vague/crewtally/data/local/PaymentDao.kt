@@ -27,6 +27,37 @@ interface PaymentDao {
     @Query("SELECT * FROM payments WHERE clerkId = :clerkId ORDER BY date DESC")
     fun observeByClerk(clerkId: String): Flow<List<PaymentEntity>>
 
+    /** The single payment behind the edit form, observed so an external change reflects live. */
+    @Query("SELECT * FROM payments WHERE id = :id")
+    fun observeById(id: String): Flow<PaymentEntity?>
+
+    @Query("SELECT * FROM payments WHERE id = :id")
+    suspend fun getById(id: String): PaymentEntity?
+
+    /**
+     * Total paid per (project, clerk) across the whole book — the payments component of every
+     * derived balance on the Home dashboard.
+     */
+    @Query(
+        """
+        SELECT projectId AS projectId, clerkId AS clerkId, SUM(amount) AS amount
+        FROM payments
+        GROUP BY projectId, clerkId
+        """,
+    )
+    fun observePaymentsRollup(): Flow<List<ClerkProjectAmount>>
+
+    /** The same payments roll-up scoped to one clerk — the clerk profile's payments component. */
+    @Query(
+        """
+        SELECT projectId AS projectId, clerkId AS clerkId, SUM(amount) AS amount
+        FROM payments
+        WHERE clerkId = :clerkId
+        GROUP BY projectId, clerkId
+        """,
+    )
+    fun observePaymentsRollupForClerk(clerkId: String): Flow<List<ClerkProjectAmount>>
+
     /** Used by the clerk delete-eligibility check (Phase 1): a payment row is history. */
     @Query("SELECT COUNT(*) FROM payments WHERE clerkId = :clerkId")
     suspend fun countByClerk(clerkId: String): Int
