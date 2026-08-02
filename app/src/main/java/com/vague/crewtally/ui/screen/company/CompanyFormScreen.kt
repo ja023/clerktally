@@ -33,6 +33,7 @@ import com.vague.crewtally.ui.company.CompanyFormViewModel
 import com.vague.crewtally.ui.components.ContactSearchField
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyConfirmDialog
+import com.vague.crewtally.ui.components.CrewTallyOutlinedButton
 import com.vague.crewtally.ui.components.CrewTallyTextField
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.util.crewTallyDatabase
@@ -114,6 +115,17 @@ fun CompanyFormScreen(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
         )
 
+        if (uiState.isEditing) {
+            // A distinct OutlinedButton, not a TextButton in the archive/delete cluster below —
+            // sharing a report is a completely different kind of action from those lifecycle
+            // actions and shouldn't read like one (Phase 5 review finding).
+            CrewTallyOutlinedButton(
+                text = stringResource(R.string.report_share_company),
+                onClick = { onShareReport(requireNotNull(companyId)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
         CrewTallyButton(
             text = stringResource(R.string.action_save),
             enabled = uiState.canSave,
@@ -128,13 +140,6 @@ fun CompanyFormScreen(
         )
 
         if (uiState.isEditing) {
-            TextButton(
-                onClick = { onShareReport(requireNotNull(companyId)) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = CrewTallyTheme.dimens.minTarget),
-            ) {
-                Text(text = stringResource(R.string.report_share_company), style = MaterialTheme.typography.labelLarge)
-            }
-
             if (uiState.isArchived) {
                 TextButton(
                     onClick = { showUnarchiveConfirm = true },

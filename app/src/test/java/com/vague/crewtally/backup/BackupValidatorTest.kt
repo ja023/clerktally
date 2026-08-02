@@ -1,5 +1,6 @@
 package com.vague.crewtally.backup
 
+import com.vague.crewtally.util.Money
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -118,5 +119,79 @@ class BackupValidatorTest {
         val result = BackupValidator.validate(BackupSerializer.encode(payload)) as BackupValidationResult.Invalid
 
         assertEquals(BackupValidationError.DanglingReference("payment -> project"), result.error)
+    }
+
+    @Test
+    fun `an unrecognized project status is rejected as MissingField naming project status`() {
+        val payload = validPayload().copy(
+            projects = listOf(ProjectDto("p1", "co1", "Warehouse", "", "2026-01-01", null, "ACTIVEE", "USD", "")),
+        )
+
+        val result = BackupValidator.validate(BackupSerializer.encode(payload)) as BackupValidationResult.Invalid
+
+        assertEquals(BackupValidationError.MissingField("project status"), result.error)
+    }
+
+    @Test
+    fun `two companies sharing the same id are rejected as a duplicate id in companies`() {
+        val payload = validPayload().copy(
+            companies = listOf(CompanyDto("co1", "Acme", "", "", "", archived = false), CompanyDto("co1", "Acme Two", "", "", "", archived = false)),
+        )
+
+        val result = BackupValidator.validate(BackupSerializer.encode(payload)) as BackupValidationResult.Invalid
+
+        assertEquals(BackupValidationError.DuplicateId("companies"), result.error)
+    }
+
+    @Test
+    fun `two payments sharing the same id are rejected as a duplicate id in payments`() {
+        val payload = validPayload().copy(
+            payments = listOf(
+                PaymentDto("pay1", "p1", "cl1", "2026-01-03", 2000, ""),
+                PaymentDto("pay1", "p1", "cl1", "2026-01-04", 1000, ""),
+            ),
+        )
+
+        val result = BackupValidator.validate(BackupSerializer.encode(payload)) as BackupValidationResult.Invalid
+
+        assertEquals(BackupValidationError.DuplicateId("payments"), result.error)
+    }
+
+    @Test
+    fun `a negative roster daily rate is rejected as an invalid amount`() {
+        val payload = validPayload().copy(rosterEntries = listOf(RosterEntryDto("r1", "p1", "cl1", -500, null)))
+
+        val result = BackupValidator.validate(BackupSerializer.encode(payload)) as BackupValidationResult.Invalid
+
+        assertEquals(BackupValidationError.InvalidAmount("roster entry rate"), result.error)
+    }
+
+    @Test
+    fun `a negative payment amount is rejected as an invalid amount`() {
+        val payload = validPayload().copy(payments = listOf(PaymentDto("pay1", "p1", "cl1", "2026-01-03", -2000, "")))
+
+        val result = BackupValidator.validate(BackupSerializer.encode(payload)) as BackupValidationResult.Invalid
+
+        assertEquals(BackupValidationError.InvalidAmount("payment amount"), result.error)
+    }
+
+    @Test
+    fun `a negative extra-pay line is accepted as a legitimate deduction`() {
+        val payload = validPayload().copy(extraPayLines = listOf(ExtraPayLineDto("x1", "a1", "Damage", -2000)))
+
+        val result = BackupValidator.validate(BackupSerializer.encode(payload))
+
+        assertTrue(result is BackupValidationResult.Valid)
+    }
+
+    @Test
+    fun `an extra-pay line beyond the money ceiling is rejected as an invalid amount, deduction or not`() {
+        val payload = validPayload().copy(
+            extraPayLines = listOf(ExtraPayLineDto("x1", "a1", "Huge", -(Money.MAX_MINOR_UNITS + 1))),
+        )
+
+        val result = BackupValidator.validate(BackupSerializer.encode(payload)) as BackupValidationResult.Invalid
+
+        assertEquals(BackupValidationError.InvalidAmount("extra-pay line amount"), result.error)
     }
 }

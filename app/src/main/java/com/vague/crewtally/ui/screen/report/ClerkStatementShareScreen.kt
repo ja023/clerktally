@@ -39,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
+import com.vague.crewtally.ui.components.CrewTallyAlertDialog
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyCurrencyTotalCard
 import com.vague.crewtally.ui.theme.CrewTallyTheme
@@ -150,15 +151,24 @@ fun ClerkStatementShareScreen(
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     }
+                    val earnedText = Money.formatWithSymbol(statement.earned + statement.extras, symbol)
+                    val paidText = Money.formatWithSymbol(statement.paid, symbol)
+                    val owedText = owedDisplayText(statement.owed, symbol)
                     CrewTallyCurrencyTotalCard(
                         currencyCode = statement.currency,
                         earnedLabel = stringResource(R.string.report_earned_label),
                         paidLabel = stringResource(R.string.report_paid_label),
                         owedLabel = stringResource(R.string.report_owed_label),
-                        earnedText = Money.formatWithSymbol(statement.earned + statement.extras, symbol),
-                        paidText = Money.formatWithSymbol(statement.paid, symbol),
-                        owedText = owedDisplayText(statement.owed, symbol),
-                        contentDescription = "${statement.currency}, ${owedDisplayText(statement.owed, symbol)}",
+                        earnedText = earnedText,
+                        paidText = paidText,
+                        owedText = owedText,
+                        contentDescription = stringResource(
+                            R.string.report_currency_total_description,
+                            CurrencyCodes.displayNameFor(statement.currency),
+                            earnedText,
+                            paidText,
+                            owedText,
+                        ),
                     )
                 }
 
@@ -192,5 +202,14 @@ fun ClerkStatementShareScreen(
                 }
             }
         }
+    }
+
+    if (state.generationFailure) {
+        CrewTallyAlertDialog(
+            title = stringResource(R.string.report_generation_error_title),
+            body = stringResource(R.string.report_generation_error_body),
+            actionLabel = stringResource(R.string.action_ok),
+            onDismiss = { viewModel.onEvent(ClerkStatementShareEvent.DismissGenerationFailure) },
+        )
     }
 }

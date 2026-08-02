@@ -31,5 +31,6 @@ fun buildReportStrings(): ReportStrings = ReportStrings(
     owedPhraseAdvanceTemplate = stringResource(R.string.owed_phrase_advance),
     owedPhraseSettled = stringResource(R.string.owed_phrase_settled),
     summaryLineTemplate = stringResource(R.string.report_summary_line_template),
+    summaryLineVaryingRateTemplate = stringResource(R.string.report_summary_line_varying_rate_template),
     pageLabelTemplate = stringResource(R.string.report_page_label_template),
 )

@@ -1,0 +1,130 @@
+package com.vague.crewtally.ui.viewmodel
+
+import com.vague.crewtally.data.local.AttendanceEntryEntity
+import com.vague.crewtally.data.local.ClerkEntity
+import com.vague.crewtally.data.local.CompanyEntity
+import com.vague.crewtally.data.local.ProjectEntity
+import com.vague.crewtally.report.testReportStrings
+import com.vague.crewtally.testutil.FakeAttendanceEntryDao
+import com.vague.crewtally.testutil.FakeClerkDao
+import com.vague.crewtally.testutil.FakeCompanyDao
+import com.vague.crewtally.testutil.FakeExtraPayLineDao
+import com.vague.crewtally.testutil.FakePaymentDao
+import com.vague.crewtally.testutil.FakeProjectDao
+import com.vague.crewtally.testutil.FakeReportFileWriter
+import java.time.LocalDate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+/**
+ * Headless tests for [ClerkStatementShareViewModel]'s generation-failure path: a file-writer
+ * failure must reset [ClerkStatementShareUiState.isGenerating] and surface
+ * [ClerkStatementShareUiState.generationFailure] instead of leaving the share buttons dead.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class ClerkStatementShareViewModelTest {
+
+    private lateinit var projectDao: FakeProjectDao
+    private lateinit var clerkDao: FakeClerkDao
+    private lateinit var companyDao: FakeCompanyDao
+    private lateinit var attendanceEntryDao: FakeAttendanceEntryDao
+    private lateinit var extraPayLineDao: FakeExtraPayLineDao
+    private lateinit var paymentDao: FakePaymentDao
+    private lateinit var testDispatcher: TestDispatcher
+
+    private val jan1 = LocalDate.of(2026, 1, 1)
+
+    @Before
+    fun setUp() {
+        testDispatcher = UnconfinedTestDispatcher()
+        Dispatchers.setMain(testDispatcher)
+        projectDao = FakeProjectDao().apply {
+            seed(ProjectEntity(id = "p1", companyId = "co1", name = "Warehouse", startDate = jan1, currency = "USD"))
+        }
+        clerkDao = FakeClerkDao().apply { seed(ClerkEntity(id = "c1", name = "Ali")) }
+        companyDao = FakeCompanyDao().apply { seed(CompanyEntity(id = "co1", name = "Acme")) }
+        attendanceEntryDao = FakeAttendanceEntryDao().apply {
+            seed(AttendanceEntryEntity("a1", "p1", "c1", jan1, present = true, rateSnapshot = 5000))
+        }
+        extraPayLineDao = FakeExtraPayLineDao(attendanceEntryDao)
+        attendanceEntryDao.extraPayLineDao = extraPayLineDao
+        paymentDao = FakePaymentDao()
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun buildViewModel(fileWriter: FakeReportFileWriter) = ClerkStatementShareViewModel(
+        projectId = "p1",
+        clerkId = "c1",
+        projectDao = projectDao,
+        clerkDao = clerkDao,
+        companyDao = companyDao,
+        attendanceEntryDao = attendanceEntryDao,
+        extraPayLineDao = extraPayLineDao,
+        paymentDao = paymentDao,
+        fileWriter = fileWriter,
+        strings = testReportStrings(),
+        ioDispatcher = testDispatcher,
+    )
+
+    @Test
+    fun `a write failure resets isGenerating and surfaces generationFailure`() = runTest {
+        val viewModel = buildViewModel(FakeReportFileWriter(shouldFail = true))
+        var latest = ClerkStatementShareUiState()
+        val job = launch(Dispatchers.Unconfined) { viewModel.uiState.collect { latest = it } }
+
+        viewModel.onEvent(ClerkStatementShareEvent.ShareAsText)
+        advanceUntilIdle()
+
+        assertFalse(latest.isGenerating)
+        assertTrue(latest.generationFailure)
+
+        job.cancel()
+    }
+
+    @Test
+    fun `dismissing the generation failure clears it`() = runTest {
+        val viewModel = buildViewModel(FakeReportFileWriter(shouldFail = true))
+        var latest = ClerkStatementShareUiState()
+        val job = launch(Dispatchers.Unconfined) { viewModel.uiState.collect { latest = it } }
+
+        viewModel.onEvent(ClerkStatementShareEvent.ShareAsText)
+        advanceUntilIdle()
+        assertTrue(latest.generationFailure)
+
+        viewModel.onEvent(ClerkStatementShareEvent.DismissGenerationFailure)
+        assertFalse(latest.generationFailure)
+
+        job.cancel()
+    }
+
+    @Test
+    fun `a successful write leaves isGenerating false with no failure`() = runTest {
+        val viewModel = buildViewModel(FakeReportFileWriter(shouldFail = false))
+        var latest = ClerkStatementShareUiState()
+        val job = launch(Dispatchers.Unconfined) { viewModel.uiState.collect { latest = it } }
+
+        viewModel.onEvent(ClerkStatementShareEvent.ShareAsText)
+        advanceUntilIdle()
+
+        assertFalse(latest.isGenerating)
+        assertFalse(latest.generationFailure)
+
+        job.cancel()
+    }
+}

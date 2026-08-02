@@ -21,6 +21,8 @@ import com.vague.crewtally.report.ReportFileWriter
 import com.vague.crewtally.report.ReportLines
 import com.vague.crewtally.report.ReportStrings
 import com.vague.crewtally.report.TextReportRenderer
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,11 +38,13 @@ data class CompanyReportShareUiState(
     val totals: CompanyTotals? = null,
     val isLoaded: Boolean = false,
     val isGenerating: Boolean = false,
+    val generationFailure: Boolean = false,
 )
 
 sealed interface CompanyReportShareEvent {
     data object ShareAsText : CompanyReportShareEvent
     data object ShareAsPdf : CompanyReportShareEvent
+    data object DismissGenerationFailure : CompanyReportShareEvent
 }
 
 /**
@@ -60,6 +64,8 @@ class CompanyReportShareViewModel(
     paymentDao: PaymentDao,
     private val fileWriter: ReportFileWriter,
     private val strings: ReportStrings,
+    /** Overridable only so tests can substitute a deterministic test dispatcher for the real [Dispatchers.IO]. */
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
 
     private val balances = combine(
@@ -97,39 +103,63 @@ class CompanyReportShareViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
     private val _isGenerating = MutableStateFlow(false)
+    private val _generationFailure = MutableStateFlow(false)
 
-    val uiState: StateFlow<CompanyReportShareUiState> = combine(totalsState, _isGenerating) { totals, generating ->
-        CompanyReportShareUiState(totals = totals, isLoaded = totals != null, isGenerating = generating)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), CompanyReportShareUiState())
+    val uiState: StateFlow<CompanyReportShareUiState> =
+        combine(totalsState, _isGenerating, _generationFailure) { totals, generating, failure ->
+            CompanyReportShareUiState(
+                totals = totals,
+                isLoaded = totals != null,
+                isGenerating = generating,
+                generationFailure = failure,
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), CompanyReportShareUiState())
 
     private val _shareRequests = MutableSharedFlow<ShareFileRequest>(extraBufferCapacity = 1)
     val shareRequests: SharedFlow<ShareFileRequest> = _shareRequests
 
     fun onEvent(event: CompanyReportShareEvent) {
-        val totals = totalsState.value ?: return
-        if (_isGenerating.value) return // re-entrancy guard: ignore a second tap while generating.
-
         when (event) {
-            CompanyReportShareEvent.ShareAsText -> generate {
-                val content = TextReportRenderer.renderCompanyTotals(totals, strings)
-                val fileName = ReportFileNames.companyReportFileName(totals.companyName, "txt")
-                ShareFileRequest(fileWriter.writeText(fileName, content), "text/plain")
-            }
-
-            CompanyReportShareEvent.ShareAsPdf -> generate {
-                val lines = ReportLines.forCompanyTotals(totals, strings)
-                val fileName = ReportFileNames.companyReportFileName(totals.companyName, "pdf")
-                ShareFileRequest(fileWriter.writePdf(fileName, lines, strings.pageLabelTemplate), "application/pdf")
-            }
+            CompanyReportShareEvent.DismissGenerationFailure -> _generationFailure.value = false
+            CompanyReportShareEvent.ShareAsText -> shareAsText()
+            CompanyReportShareEvent.ShareAsPdf -> shareAsPdf()
         }
     }
 
+    private fun shareAsText() {
+        val totals = totalsState.value ?: return
+        if (_isGenerating.value) return // re-entrancy guard: ignore a second tap while generating.
+        generate {
+            val content = TextReportRenderer.renderCompanyTotals(totals, strings)
+            val fileName = ReportFileNames.companyReportFileName(totals.companyName, "txt")
+            ShareFileRequest(fileWriter.writeText(fileName, content), "text/plain")
+        }
+    }
+
+    private fun shareAsPdf() {
+        val totals = totalsState.value ?: return
+        if (_isGenerating.value) return // re-entrancy guard: ignore a second tap while generating.
+        generate {
+            val lines = ReportLines.forCompanyTotals(totals, strings)
+            val fileName = ReportFileNames.companyReportFileName(totals.companyName, "pdf")
+            ShareFileRequest(fileWriter.writePdf(fileName, lines, strings.pageLabelTemplate), "application/pdf")
+        }
+    }
+
+    /** See [ClerkStatementShareViewModel.generate]'s KDoc — same failure-handling shape. */
     private fun generate(block: suspend () -> ShareFileRequest) {
         _isGenerating.value = true
         viewModelScope.launch {
-            val request = withContext(Dispatchers.IO) { block() }
-            _shareRequests.emit(request)
-            _isGenerating.value = false
+            try {
+                val request = withContext(ioDispatcher) { block() }
+                _shareRequests.emit(request)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (failure: Exception) {
+                _generationFailure.value = true
+            } finally {
+                _isGenerating.value = false
+            }
         }
     }
 

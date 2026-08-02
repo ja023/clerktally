@@ -143,5 +143,7 @@ Phases 3→6 run WITHOUT check-in questions: build → 3-reviewer pass (kotlin, 
 
 ## Deferred / v2 candidates
 
+- **Company detail screen** (view-first, mirroring the clerk balance screen) so "view + share report" and "edit fields" stop sharing the edit form — flagged in Phase 5 review; v1 keeps the report action on the edit form but visually separated from archive/delete.
+
 - Optional biometric/PIN app lock · project cost summary screen · Arabic + RTL ·
   auto rolling local backup · company receivables/invoicing · Drive-integrated backup.

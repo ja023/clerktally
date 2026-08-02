@@ -15,11 +15,15 @@ import com.vague.crewtally.ui.viewmodel.RestoreFailure
 @Composable
 fun restoreFailureText(failure: RestoreFailure): String = when (failure) {
     is RestoreFailure.WriteFailed -> stringResource(R.string.backup_restore_error_write_failed)
+    is RestoreFailure.FileTooLarge -> stringResource(R.string.backup_restore_error_too_large)
+    is RestoreFailure.FileUnreadable -> stringResource(R.string.backup_restore_error_unreadable)
     is RestoreFailure.Validation -> when (val error = failure.error) {
         BackupValidationError.MalformedFile -> stringResource(R.string.backup_restore_error_malformed)
         is BackupValidationError.UnsupportedSchemaVersion -> stringResource(R.string.backup_restore_error_schema_version)
         is BackupValidationError.MissingField -> stringResource(R.string.backup_restore_error_missing_field, error.field)
         is BackupValidationError.DanglingReference ->
             stringResource(R.string.backup_restore_error_dangling_reference, error.reference)
+        is BackupValidationError.DuplicateId -> stringResource(R.string.backup_restore_error_duplicate_id, error.table)
+        is BackupValidationError.InvalidAmount -> stringResource(R.string.backup_restore_error_invalid_amount, error.field)
     }
 }

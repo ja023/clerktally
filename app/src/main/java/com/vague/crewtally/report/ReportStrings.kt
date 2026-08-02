@@ -31,6 +31,13 @@ data class ReportStrings(
     val owedPhraseAdvanceTemplate: String,
     val owedPhraseSettled: String,
     val summaryLineTemplate: String,
+    /**
+     * The summary line's fallback wording when the clerk's present days DON'T all share one
+     * rate (a mid-project rate edit) — [summaryLineTemplate]'s "N days x RATE" multiplier would
+     * misstate the total in that case, so this drops the per-day rate and states the earned
+     * total directly instead.
+     */
+    val summaryLineVaryingRateTemplate: String,
     /** Raw `%1$d`/`%2$d` template for the PDF footer, e.g. "Page %1$d of %2$d". */
     val pageLabelTemplate: String,
 )

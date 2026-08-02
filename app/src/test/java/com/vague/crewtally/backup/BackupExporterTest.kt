@@ -3,6 +3,7 @@ package com.vague.crewtally.backup
 import com.vague.crewtally.data.local.ClerkEntity
 import com.vague.crewtally.data.local.CompanyEntity
 import com.vague.crewtally.testutil.FakeAttendanceEntryDao
+import com.vague.crewtally.testutil.FakeBackupExporter
 import com.vague.crewtally.testutil.FakeClerkDao
 import com.vague.crewtally.testutil.FakeCompanyDao
 import com.vague.crewtally.testutil.FakeExtraPayLineDao
@@ -13,6 +14,11 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+/**
+ * [FakeBackupExporter] mirrors [RoomBackupExporter]'s DAO-to-DTO assembly (see that fake's KDoc
+ * for why the real transaction wrapping isn't exercised here — same JVM-vs-Room gap as
+ * [RestoreWriterTest]).
+ */
 class BackupExporterTest {
 
     @Test
@@ -24,8 +30,7 @@ class BackupExporterTest {
         val attendanceEntryDao = FakeAttendanceEntryDao()
         val extraPayLineDao = FakeExtraPayLineDao(attendanceEntryDao)
         val paymentDao = FakePaymentDao()
-
-        val payload = BackupExporter.export(
+        val exporter = FakeBackupExporter(
             companyDao,
             clerkDao,
             projectDao,
@@ -33,6 +38,9 @@ class BackupExporterTest {
             attendanceEntryDao,
             extraPayLineDao,
             paymentDao,
+        )
+
+        val payload = exporter.export(
             appVersionName = "0.1.0",
             exportedAtEpochMillis = 1_700_000_000_000L,
         )

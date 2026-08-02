@@ -1,5 +1,7 @@
 package com.vague.crewtally.backup
 
+import com.vague.crewtally.data.local.ProjectStatus
+import com.vague.crewtally.util.Money
 import java.time.LocalDate
 
 /**
@@ -21,6 +23,12 @@ sealed interface BackupValidationError {
 
     /** A foreign key inside the payload points at a row that isn't present in the same payload. */
     data class DanglingReference(val reference: String) : BackupValidationError
+
+    /** Two or more rows in [table] share the same id — every table's id must be unique. */
+    data class DuplicateId(val table: String) : BackupValidationError
+
+    /** A rate/amount [field] is negative where negative isn't legitimate, or too large to trust. */
+    data class InvalidAmount(val field: String) : BackupValidationError
 }
 
 /** The outcome of validating a raw backup file's text content. */
@@ -47,6 +55,8 @@ object BackupValidator {
         }
 
         requiredFieldError(payload)?.let { return BackupValidationResult.Invalid(it) }
+        duplicateIdError(payload)?.let { return BackupValidationResult.Invalid(it) }
+        invalidAmountError(payload)?.let { return BackupValidationResult.Invalid(it) }
         danglingReferenceError(payload)?.let { return BackupValidationResult.Invalid(it) }
 
         return BackupValidationResult.Valid(payload, BackupCounts.of(payload))
@@ -69,6 +79,7 @@ object BackupValidator {
             if (project.endDate != null && !isValidDate(project.endDate)) {
                 return BackupValidationError.MissingField("project end date")
             }
+            if (!isValidStatus(project.status)) return BackupValidationError.MissingField("project status")
         }
         payload.rosterEntries.forEach { roster ->
             if (roster.id.isBlank()) return BackupValidationError.MissingField("roster entry id")
@@ -83,6 +94,55 @@ object BackupValidator {
         payload.payments.forEach { payment ->
             if (payment.id.isBlank()) return BackupValidationError.MissingField("payment id")
             if (!isValidDate(payment.date)) return BackupValidationError.MissingField("payment date")
+        }
+        return null
+    }
+
+    /**
+     * Every table's ids must be unique — a duplicate would silently overwrite a row during
+     * [RestoreWriter]'s upsert-by-id pass, quietly dropping data instead of failing loudly here.
+     */
+    private fun duplicateIdError(payload: BackupPayload): BackupValidationError.DuplicateId? {
+        val tables = listOf(
+            "companies" to payload.companies.map { it.id },
+            "clerks" to payload.clerks.map { it.id },
+            "projects" to payload.projects.map { it.id },
+            "roster entries" to payload.rosterEntries.map { it.id },
+            "attendance records" to payload.attendanceEntries.map { it.id },
+            "extra-pay lines" to payload.extraPayLines.map { it.id },
+            "payments" to payload.payments.map { it.id },
+        )
+        tables.forEach { (table, ids) ->
+            if (ids.toSet().size != ids.size) return BackupValidationError.DuplicateId(table)
+        }
+        return null
+    }
+
+    /**
+     * Rates and payment amounts must be non-negative and within [Money.MAX_MINOR_UNITS] — extras
+     * are the one legitimately negative amount (LOCKED #7: deductions), so they're bounded by
+     * absolute value only, never rejected for being negative.
+     */
+    private fun invalidAmountError(payload: BackupPayload): BackupValidationError.InvalidAmount? {
+        payload.rosterEntries.forEach { roster ->
+            if (!isValidAmount(roster.dailyRate, allowNegative = false)) {
+                return BackupValidationError.InvalidAmount("roster entry rate")
+            }
+        }
+        payload.attendanceEntries.forEach { attendance ->
+            if (!isValidAmount(attendance.rateSnapshot, allowNegative = false)) {
+                return BackupValidationError.InvalidAmount("attendance rate snapshot")
+            }
+        }
+        payload.extraPayLines.forEach { extra ->
+            if (!isValidAmount(extra.amount, allowNegative = true)) {
+                return BackupValidationError.InvalidAmount("extra-pay line amount")
+            }
+        }
+        payload.payments.forEach { payment ->
+            if (!isValidAmount(payment.amount, allowNegative = false)) {
+                return BackupValidationError.InvalidAmount("payment amount")
+            }
         }
         return null
     }
@@ -117,4 +177,12 @@ object BackupValidator {
     }
 
     private fun isValidDate(value: String): Boolean = runCatching { LocalDate.parse(value) }.isSuccess
+
+    private fun isValidStatus(value: String): Boolean = runCatching { ProjectStatus.valueOf(value) }.isSuccess
+
+    private fun isValidAmount(value: Long, allowNegative: Boolean): Boolean {
+        if (!allowNegative && value < 0) return false
+        if (value == Long.MIN_VALUE) return false // would overflow kotlin.math.abs below
+        return kotlin.math.abs(value) <= Money.MAX_MINOR_UNITS
+    }
 }

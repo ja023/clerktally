@@ -39,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
+import com.vague.crewtally.ui.components.CrewTallyAlertDialog
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyCurrencyTotalCard
 import com.vague.crewtally.ui.theme.CrewTallyTheme
@@ -137,15 +138,24 @@ fun CompanyReportShareScreen(
                         )
                         totals.grandTotalsByCurrency.forEach { total ->
                             val symbol = CurrencyCodes.symbolFor(total.currency)
+                            val earnedText = Money.formatWithSymbol(total.earned, symbol)
+                            val paidText = Money.formatWithSymbol(total.paid, symbol)
+                            val owedText = owedDisplayText(total.owed, symbol)
                             CrewTallyCurrencyTotalCard(
                                 currencyCode = total.currency,
                                 earnedLabel = stringResource(R.string.report_earned_label),
                                 paidLabel = stringResource(R.string.report_paid_label),
                                 owedLabel = stringResource(R.string.report_owed_label),
-                                earnedText = Money.formatWithSymbol(total.earned, symbol),
-                                paidText = Money.formatWithSymbol(total.paid, symbol),
-                                owedText = owedDisplayText(total.owed, symbol),
-                                contentDescription = "${total.currency}, ${owedDisplayText(total.owed, symbol)}",
+                                earnedText = earnedText,
+                                paidText = paidText,
+                                owedText = owedText,
+                                contentDescription = stringResource(
+                                    R.string.report_currency_total_description,
+                                    CurrencyCodes.displayNameFor(total.currency),
+                                    earnedText,
+                                    paidText,
+                                    owedText,
+                                ),
                             )
                         }
                     }
@@ -181,5 +191,14 @@ fun CompanyReportShareScreen(
                 }
             }
         }
+    }
+
+    if (state.generationFailure) {
+        CrewTallyAlertDialog(
+            title = stringResource(R.string.report_generation_error_title),
+            body = stringResource(R.string.report_generation_error_body),
+            actionLabel = stringResource(R.string.action_ok),
+            onDismiss = { viewModel.onEvent(CompanyReportShareEvent.DismissGenerationFailure) },
+        )
     }
 }

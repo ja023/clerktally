@@ -121,18 +121,39 @@ object ReportLines {
         return lines
     }
 
+    /**
+     * "N days x RATE" only tells the truth when every present day shares one rate. A mid-project
+     * rate edit (LOCKED #2/roster: future days only, past days keep their rateSnapshot) means two
+     * present days can carry different rates, and multiplying the day count by any single one of
+     * them would misstate the total — so that case drops the multiplier and states the earned
+     * total directly instead ([ReportStrings.summaryLineVaryingRateTemplate]).
+     */
     private fun summaryLine(statement: ClerkStatement, strings: ReportStrings, symbol: String): String {
-        val representativeRate = statement.dayLines.lastOrNull { it.present }?.rateSnapshot ?: 0L
-        return String.format(
-            Locale.ROOT,
-            strings.summaryLineTemplate,
-            statement.clerkName,
-            statement.presentDayCount,
-            Money.formatWithSymbol(representativeRate, symbol),
-            Money.formatSignedWithSymbol(statement.extras, symbol),
-            Money.formatWithSymbol(statement.paid, symbol),
-            owedPhrase(statement.owed, symbol, strings),
-        )
+        val presentRates = statement.dayLines.filter { it.present }.map { it.rateSnapshot }.distinct()
+
+        return if (presentRates.size <= 1) {
+            String.format(
+                Locale.ROOT,
+                strings.summaryLineTemplate,
+                statement.clerkName,
+                statement.presentDayCount,
+                Money.formatWithSymbol(presentRates.firstOrNull() ?: 0L, symbol),
+                Money.formatSignedWithSymbol(statement.extras, symbol),
+                Money.formatWithSymbol(statement.paid, symbol),
+                owedPhrase(statement.owed, symbol, strings),
+            )
+        } else {
+            String.format(
+                Locale.ROOT,
+                strings.summaryLineVaryingRateTemplate,
+                statement.clerkName,
+                statement.presentDayCount,
+                Money.formatWithSymbol(statement.earned, symbol),
+                Money.formatSignedWithSymbol(statement.extras, symbol),
+                Money.formatWithSymbol(statement.paid, symbol),
+                owedPhrase(statement.owed, symbol, strings),
+            )
+        }
     }
 
     private fun owedPhrase(owed: Long, symbol: String, strings: ReportStrings): String =

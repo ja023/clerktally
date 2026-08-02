@@ -103,6 +103,19 @@ class ReportLinesTest {
     }
 
     @Test
+    fun `the summary line drops the per-day rate multiplier when the rate changed mid-project`() {
+        val attendance = listOf(
+            AttendanceEntryEntity("a1", "p", "c", jan1, present = true, rateSnapshot = 2500),
+            AttendanceEntryEntity("a2", "p", "c", jan10, present = true, rateSnapshot = 3000),
+        )
+        val statement = ClerkStatementBuilder.build("Ali", "Project", "Acme", "USD", attendance, emptyList(), emptyList())
+
+        val summary = ReportLines.forClerkStatement(statement, strings)[4]
+
+        assertEquals("Ali: 2 days, earned $55.00, extras $0.00, paid $0.00, $55.00 owed", summary)
+    }
+
+    @Test
     fun `company totals lines list each project's clerk rows and end with a grand total section`() {
         val project = CompanyReportProjectInput(
             "p1", "Warehouse Count", "USD",
@@ -150,5 +163,6 @@ fun testReportStrings(): ReportStrings = ReportStrings(
     owedPhraseAdvanceTemplate = "Advance of %1\$s",
     owedPhraseSettled = "Paid in full",
     summaryLineTemplate = "%1\$s: %2\$d days x %3\$s, extras %4\$s, paid %5\$s, %6\$s",
+    summaryLineVaryingRateTemplate = "%1\$s: %2\$d days, earned %3\$s, extras %4\$s, paid %5\$s, %6\$s",
     pageLabelTemplate = "Page %1\$d of %2\$d",
 )

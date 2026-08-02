@@ -14,13 +14,6 @@ import com.vague.crewtally.backup.BackupValidationError
 import com.vague.crewtally.backup.BackupValidationResult
 import com.vague.crewtally.backup.BackupValidator
 import com.vague.crewtally.backup.RestoreWriter
-import com.vague.crewtally.data.local.AttendanceEntryDao
-import com.vague.crewtally.data.local.ClerkDao
-import com.vague.crewtally.data.local.CompanyDao
-import com.vague.crewtally.data.local.ExtraPayLineDao
-import com.vague.crewtally.data.local.PaymentDao
-import com.vague.crewtally.data.local.ProjectDao
-import com.vague.crewtally.data.local.RosterEntryDao
 import com.vague.crewtally.report.ReportFileNames
 import com.vague.crewtally.report.ReportFileWriter
 import java.time.Instant
@@ -38,15 +31,26 @@ import kotlinx.coroutines.withContext
 /** A validated payload sitting behind the destructive restore confirm dialog, awaiting the user's decision. */
 data class PendingRestore(val payload: BackupPayload, val counts: BackupCounts)
 
-/** Why a restore did not complete — validation rejected the file, or the write itself failed. */
+/**
+ * Why a restore did not complete — validation rejected the file, the write itself failed, or the
+ * picked file never made it to validation at all ([FileTooLarge]/[FileUnreadable], raised by the
+ * screen before [BackupValidator] ever sees any content).
+ */
 sealed interface RestoreFailure {
     data class Validation(val error: BackupValidationError) : RestoreFailure
     data object WriteFailed : RestoreFailure
+
+    /** The picked file is bigger than any real CrewTally backup could plausibly be. */
+    data object FileTooLarge : RestoreFailure
+
+    /** The platform could not open/read the picked file at all (permission revoked, provider gone). */
+    data object FileUnreadable : RestoreFailure
 }
 
 data class BackupUiState(
     val isExporting: Boolean = false,
     val isRestoring: Boolean = false,
+    val isValidatingRestore: Boolean = false,
     val pendingRestore: PendingRestore? = null,
     val restoreFailure: RestoreFailure? = null,
     val restoreSuccess: BackupCounts? = null,
@@ -57,6 +61,9 @@ sealed interface BackupEvent {
 
     /** [content] is the already-read text of the file the user picked via SAF — read by the screen, not this ViewModel. */
     data class RestoreFilePicked(val content: String) : BackupEvent
+
+    /** The screen rejected the picked file before it ever reached [BackupValidator] (too large, unreadable). */
+    data class RestoreFileRejected(val failure: RestoreFailure) : BackupEvent
     data object ConfirmRestore : BackupEvent
     data object DismissRestoreConfirm : BackupEvent
     data object DismissRestoreFailure : BackupEvent
@@ -69,16 +76,12 @@ sealed interface BackupEvent {
  * the More-screen nudge resets; restore validates fully (never touching the database on a bad
  * file — see [BackupValidator]) before showing a destructive confirm, then runs the actual write
  * through [RestoreWriter] in one transaction. [isExporting]/[isRestoring] double as re-entrancy
- * guards, matching [ClerkStatementShareViewModel]'s pattern.
+ * guards, matching [ClerkStatementShareViewModel]'s pattern; [isValidatingRestore] fills the gap
+ * between picking a file and the confirm dialog appearing, so that gap never reads as dead
+ * silence to a screen reader.
  */
 class BackupViewModel(
-    private val companyDao: CompanyDao,
-    private val clerkDao: ClerkDao,
-    private val projectDao: ProjectDao,
-    private val rosterEntryDao: RosterEntryDao,
-    private val attendanceEntryDao: AttendanceEntryDao,
-    private val extraPayLineDao: ExtraPayLineDao,
-    private val paymentDao: PaymentDao,
+    private val backupExporter: BackupExporter,
     private val fileWriter: ReportFileWriter,
     private val restoreWriter: RestoreWriter,
     private val backupPreferences: BackupPreferences,
@@ -96,6 +99,7 @@ class BackupViewModel(
         when (event) {
             BackupEvent.ExportRequested -> onExport()
             is BackupEvent.RestoreFilePicked -> onRestoreFilePicked(event.content)
+            is BackupEvent.RestoreFileRejected -> _uiState.update { it.copy(restoreFailure = event.failure) }
             BackupEvent.ConfirmRestore -> onConfirmRestore()
             BackupEvent.DismissRestoreConfirm -> _uiState.update { it.copy(pendingRestore = null) }
             BackupEvent.DismissRestoreFailure -> _uiState.update { it.copy(restoreFailure = null) }
@@ -109,17 +113,7 @@ class BackupViewModel(
         viewModelScope.launch {
             val exportedAt = clock()
             val request = withContext(Dispatchers.IO) {
-                val payload = BackupExporter.export(
-                    companyDao,
-                    clerkDao,
-                    projectDao,
-                    rosterEntryDao,
-                    attendanceEntryDao,
-                    extraPayLineDao,
-                    paymentDao,
-                    appVersionName,
-                    exportedAt,
-                )
+                val payload = backupExporter.export(appVersionName, exportedAt)
                 val json = BackupSerializer.encode(payload)
                 val fileName = ReportFileNames.backupFileName(Instant.ofEpochMilli(exportedAt))
                 val file = fileWriter.writeText(fileName, json)
@@ -133,12 +127,17 @@ class BackupViewModel(
 
     private fun onRestoreFilePicked(content: String) {
         if (_uiState.value.isRestoring) return // re-entrancy guard
+        _uiState.update { it.copy(isValidatingRestore = true) }
         viewModelScope.launch {
             when (val result = withContext(Dispatchers.Default) { BackupValidator.validate(content) }) {
                 is BackupValidationResult.Valid ->
-                    _uiState.update { it.copy(pendingRestore = PendingRestore(result.payload, result.counts)) }
+                    _uiState.update {
+                        it.copy(isValidatingRestore = false, pendingRestore = PendingRestore(result.payload, result.counts))
+                    }
                 is BackupValidationResult.Invalid ->
-                    _uiState.update { it.copy(restoreFailure = RestoreFailure.Validation(result.error)) }
+                    _uiState.update {
+                        it.copy(isValidatingRestore = false, restoreFailure = RestoreFailure.Validation(result.error))
+                    }
             }
         }
     }
@@ -163,13 +162,7 @@ class BackupViewModel(
 
     companion object {
         fun factory(
-            companyDao: CompanyDao,
-            clerkDao: ClerkDao,
-            projectDao: ProjectDao,
-            rosterEntryDao: RosterEntryDao,
-            attendanceEntryDao: AttendanceEntryDao,
-            extraPayLineDao: ExtraPayLineDao,
-            paymentDao: PaymentDao,
+            backupExporter: BackupExporter,
             fileWriter: ReportFileWriter,
             restoreWriter: RestoreWriter,
             backupPreferences: BackupPreferences,
@@ -177,13 +170,7 @@ class BackupViewModel(
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 BackupViewModel(
-                    companyDao,
-                    clerkDao,
-                    projectDao,
-                    rosterEntryDao,
-                    attendanceEntryDao,
-                    extraPayLineDao,
-                    paymentDao,
+                    backupExporter,
                     fileWriter,
                     restoreWriter,
                     backupPreferences,

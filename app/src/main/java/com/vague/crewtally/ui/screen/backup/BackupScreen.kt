@@ -49,10 +49,14 @@ import com.vague.crewtally.ui.components.CrewTallyAlertDialog
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyConfirmDialog
 import com.vague.crewtally.ui.theme.CrewTallyTheme
+import com.vague.crewtally.ui.util.BackupFileReadOutcome
+import com.vague.crewtally.ui.util.backupCountsSentence
+import com.vague.crewtally.ui.util.readBackupFile
 import com.vague.crewtally.ui.util.restoreFailureText
 import com.vague.crewtally.ui.util.shareFile
 import com.vague.crewtally.ui.viewmodel.BackupEvent
 import com.vague.crewtally.ui.viewmodel.BackupViewModel
+import com.vague.crewtally.ui.viewmodel.RestoreFailure
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -69,17 +73,10 @@ import kotlinx.coroutines.withContext
 fun BackupScreen(navController: NavController, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val application = context.applicationContext as CrewTallyApplication
-    val database = application.database
     val backupPreferences = remember { BackupPreferences(context) }
     val viewModel: BackupViewModel = viewModel(
         factory = BackupViewModel.factory(
-            companyDao = database.companyDao(),
-            clerkDao = database.clerkDao(),
-            projectDao = database.projectDao(),
-            rosterEntryDao = database.rosterEntryDao(),
-            attendanceEntryDao = database.attendanceEntryDao(),
-            extraPayLineDao = database.extraPayLineDao(),
-            paymentDao = database.paymentDao(),
+            backupExporter = application.backupExporter,
             fileWriter = application.reportFileWriter,
             restoreWriter = application.restoreWriter,
             backupPreferences = backupPreferences,
@@ -90,6 +87,8 @@ fun BackupScreen(navController: NavController, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     val exportingDescription = stringResource(R.string.backup_exporting)
     val restoringDescription = stringResource(R.string.backup_restoring)
+    val validatingDescription = stringResource(R.string.backup_validating_restore)
+    val actionsEnabled = !state.isExporting && !state.isRestoring && !state.isValidatingRestore
 
     LaunchedEffect(Unit) {
         viewModel.shareRequests.collect { request -> context.shareFile(request.file, request.mimeType) }
@@ -98,12 +97,13 @@ fun BackupScreen(navController: NavController, modifier: Modifier = Modifier) {
     val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
-            val content = withContext(Dispatchers.IO) {
-                runCatching {
-                    context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-                }.getOrNull().orEmpty()
+            when (val outcome = withContext(Dispatchers.IO) { readBackupFile(context, uri) }) {
+                is BackupFileReadOutcome.Content -> viewModel.onEvent(BackupEvent.RestoreFilePicked(outcome.text))
+                BackupFileReadOutcome.TooLarge ->
+                    viewModel.onEvent(BackupEvent.RestoreFileRejected(RestoreFailure.FileTooLarge))
+                BackupFileReadOutcome.Unreadable ->
+                    viewModel.onEvent(BackupEvent.RestoreFileRejected(RestoreFailure.FileUnreadable))
             }
-            viewModel.onEvent(BackupEvent.RestoreFilePicked(content))
         }
     }
 
@@ -139,7 +139,7 @@ fun BackupScreen(navController: NavController, modifier: Modifier = Modifier) {
                     CrewTallyButton(
                         text = stringResource(R.string.backup_export_action),
                         onClick = { viewModel.onEvent(BackupEvent.ExportRequested) },
-                        enabled = !state.isExporting,
+                        enabled = actionsEnabled,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Text(
@@ -153,8 +153,8 @@ fun BackupScreen(navController: NavController, modifier: Modifier = Modifier) {
                 Column(verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceSm)) {
                     CrewTallyButton(
                         text = stringResource(R.string.backup_restore_action),
-                        onClick = { restoreLauncher.launch(arrayOf("*/*")) },
-                        enabled = !state.isRestoring,
+                        onClick = { restoreLauncher.launch(arrayOf("application/json", "text/*")) },
+                        enabled = actionsEnabled,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Text(
@@ -162,6 +162,7 @@ fun BackupScreen(navController: NavController, modifier: Modifier = Modifier) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (state.isValidatingRestore) BackupProgressRow(validatingDescription)
                     if (state.isRestoring) BackupProgressRow(restoringDescription)
                 }
             }
@@ -171,16 +172,7 @@ fun BackupScreen(navController: NavController, modifier: Modifier = Modifier) {
     state.pendingRestore?.let { pending ->
         CrewTallyConfirmDialog(
             title = stringResource(R.string.backup_restore_confirm_title),
-            body = stringResource(
-                R.string.backup_restore_confirm_body,
-                pending.counts.companies,
-                pending.counts.clerks,
-                pending.counts.projects,
-                pending.counts.rosterEntries,
-                pending.counts.attendanceEntries,
-                pending.counts.extraPayLines,
-                pending.counts.payments,
-            ),
+            body = stringResource(R.string.backup_restore_confirm_body, backupCountsSentence(pending.counts)),
             confirmLabel = stringResource(R.string.backup_restore_confirm_action),
             dismissLabel = stringResource(R.string.action_cancel),
             isDestructive = true,
@@ -216,36 +208,40 @@ private fun BackupProgressRow(description: String, modifier: Modifier = Modifier
     }
 }
 
-/** Confirmation-replaces-the-form (Jad's locked preference): echoes exactly what was imported. */
+/**
+ * Confirmation-replaces-the-form (Jad's locked preference): echoes exactly what was imported.
+ * Title and body sit in ONE merged semantics node (mirroring `OwedFigureCard`'s pattern) so
+ * TalkBack reads the whole imported-counts sentence as a single announcement instead of two
+ * separate, disconnected nodes.
+ */
 @Composable
 private fun RestoreSuccessPanel(counts: BackupCounts, onDone: () -> Unit, modifier: Modifier = Modifier) {
+    val title = stringResource(R.string.backup_restore_success_title)
+    val body = stringResource(R.string.backup_restore_success_body, backupCountsSentence(counts))
+
     Column(
         modifier = modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceLg),
     ) {
-        Text(
-            text = stringResource(R.string.backup_restore_success_title),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.semantics {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceSm),
+            modifier = Modifier.semantics(mergeDescendants = true) {
                 heading()
                 liveRegion = LiveRegionMode.Polite
+                contentDescription = "$title. $body"
             },
-        )
-        Text(
-            text = stringResource(
-                R.string.backup_restore_success_body,
-                counts.companies,
-                counts.clerks,
-                counts.projects,
-                counts.rosterEntries,
-                counts.attendanceEntries,
-                counts.extraPayLines,
-                counts.payments,
-            ),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
         CrewTallyButton(text = stringResource(R.string.backup_done_action), onClick = onDone, modifier = Modifier.fillMaxWidth())
     }
 }

@@ -1,7 +1,9 @@
 package com.vague.crewtally
 
 import android.app.Application
+import com.vague.crewtally.backup.BackupExporter
 import com.vague.crewtally.backup.RestoreWriter
+import com.vague.crewtally.backup.RoomBackupExporter
 import com.vague.crewtally.backup.RoomRestoreWriter
 import com.vague.crewtally.data.local.AttendanceWriter
 import com.vague.crewtally.data.local.CrewTallyDatabase
@@ -40,6 +42,9 @@ class CrewTallyApplication : Application() {
 
     /** Phase 5: the whole-database restore writer (same one-instance-per-app rule as above). */
     val restoreWriter: RestoreWriter by lazy { RoomRestoreWriter(database) }
+
+    /** Phase 5: the whole-database export reader (same one-instance-per-app rule as above). */
+    val backupExporter: BackupExporter by lazy { RoomBackupExporter(database) }
 
     /** Phase 5: writes generated report/backup files under `cacheDir/shared/` for the share sheet. */
     val reportFileWriter: ReportFileWriter by lazy { AndroidReportFileWriter(this) }

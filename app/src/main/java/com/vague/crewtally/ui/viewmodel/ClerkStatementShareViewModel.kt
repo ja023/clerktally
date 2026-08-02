@@ -23,6 +23,8 @@ import com.vague.crewtally.report.ReportLines
 import com.vague.crewtally.report.ReportStrings
 import com.vague.crewtally.report.TextReportRenderer
 import java.io.File
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -47,11 +49,13 @@ data class ClerkStatementShareUiState(
     val statement: ClerkStatement? = null,
     val isLoaded: Boolean = false,
     val isGenerating: Boolean = false,
+    val generationFailure: Boolean = false,
 )
 
 sealed interface ClerkStatementShareEvent {
     data object ShareAsText : ClerkStatementShareEvent
     data object ShareAsPdf : ClerkStatementShareEvent
+    data object DismissGenerationFailure : ClerkStatementShareEvent
 }
 
 /**
@@ -73,6 +77,8 @@ class ClerkStatementShareViewModel(
     paymentDao: PaymentDao,
     private val fileWriter: ReportFileWriter,
     private val strings: ReportStrings,
+    /** Overridable only so tests can substitute a deterministic test dispatcher for the real [Dispatchers.IO]. */
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
 
     private data class RawLedger(
@@ -113,43 +119,73 @@ class ClerkStatementShareViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
     private val _isGenerating = MutableStateFlow(false)
+    private val _generationFailure = MutableStateFlow(false)
 
-    val uiState: StateFlow<ClerkStatementShareUiState> = combine(statementState, _isGenerating) { statement, generating ->
-        ClerkStatementShareUiState(statement = statement, isLoaded = statement != null, isGenerating = generating)
-    }.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-        ClerkStatementShareUiState(),
-    )
+    val uiState: StateFlow<ClerkStatementShareUiState> =
+        combine(statementState, _isGenerating, _generationFailure) { statement, generating, failure ->
+            ClerkStatementShareUiState(
+                statement = statement,
+                isLoaded = statement != null,
+                isGenerating = generating,
+                generationFailure = failure,
+            )
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
+            ClerkStatementShareUiState(),
+        )
 
     private val _shareRequests = MutableSharedFlow<ShareFileRequest>(extraBufferCapacity = 1)
     val shareRequests: SharedFlow<ShareFileRequest> = _shareRequests
 
     fun onEvent(event: ClerkStatementShareEvent) {
-        val statement = statementState.value ?: return
-        if (_isGenerating.value) return // re-entrancy guard: ignore a second tap while generating.
-
         when (event) {
-            ClerkStatementShareEvent.ShareAsText -> generate {
-                val content = TextReportRenderer.renderClerkStatement(statement, strings)
-                val fileName = ReportFileNames.clerkStatementFileName(statement.clerkName, "txt")
-                ShareFileRequest(fileWriter.writeText(fileName, content), "text/plain")
-            }
-
-            ClerkStatementShareEvent.ShareAsPdf -> generate {
-                val lines = ReportLines.forClerkStatement(statement, strings)
-                val fileName = ReportFileNames.clerkStatementFileName(statement.clerkName, "pdf")
-                ShareFileRequest(fileWriter.writePdf(fileName, lines, strings.pageLabelTemplate), "application/pdf")
-            }
+            ClerkStatementShareEvent.DismissGenerationFailure -> _generationFailure.value = false
+            ClerkStatementShareEvent.ShareAsText -> shareAsText()
+            ClerkStatementShareEvent.ShareAsPdf -> shareAsPdf()
         }
     }
 
+    private fun shareAsText() {
+        val statement = statementState.value ?: return
+        if (_isGenerating.value) return // re-entrancy guard: ignore a second tap while generating.
+        generate {
+            val content = TextReportRenderer.renderClerkStatement(statement, strings)
+            val fileName = ReportFileNames.clerkStatementFileName(statement.clerkName, "txt")
+            ShareFileRequest(fileWriter.writeText(fileName, content), "text/plain")
+        }
+    }
+
+    private fun shareAsPdf() {
+        val statement = statementState.value ?: return
+        if (_isGenerating.value) return // re-entrancy guard: ignore a second tap while generating.
+        generate {
+            val lines = ReportLines.forClerkStatement(statement, strings)
+            val fileName = ReportFileNames.clerkStatementFileName(statement.clerkName, "pdf")
+            ShareFileRequest(fileWriter.writePdf(fileName, lines, strings.pageLabelTemplate), "application/pdf")
+        }
+    }
+
+    /**
+     * Runs [block] off the main thread and shares the result. An IO failure here (disk full,
+     * PDF drawing error) used to leave `isGenerating` stuck true forever with no way for the
+     * user to retry — now it resets in a `finally` block regardless of outcome, and a caught
+     * failure surfaces `generationFailure` so the screen can show a dismissable alert instead
+     * of dead buttons.
+     */
     private fun generate(block: suspend () -> ShareFileRequest) {
         _isGenerating.value = true
         viewModelScope.launch {
-            val request = withContext(Dispatchers.IO) { block() }
-            _shareRequests.emit(request)
-            _isGenerating.value = false
+            try {
+                val request = withContext(ioDispatcher) { block() }
+                _shareRequests.emit(request)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (failure: Exception) {
+                _generationFailure.value = true
+            } finally {
+                _isGenerating.value = false
+            }
         }
     }
 

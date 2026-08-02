@@ -305,7 +305,11 @@
     <string name="report_project_label">Project</string>
     <string name="report_grand_total_label">Grand total</string>
     <string name="report_summary_line_template">%1$s: %2$d days x %3$s, extras %4$s, paid %5$s, %6$s</string>
+    <string name="report_summary_line_varying_rate_template">%1$s: %2$d days, earned %3$s, extras %4$s, paid %5$s, %6$s</string>
     <string name="report_page_label_template">Page %1$d of %2$d</string>
+    <string name="report_currency_total_description">%1$s. Earned %2$s. Paid %3$s. %4$s.</string>
+    <string name="report_generation_error_title">Couldn\'t create the file</string>
+    <string name="report_generation_error_body">Couldn\'t create the report file. Try again.</string>
 
     <!-- Backup (Phase 5) -->
     <string name="backup_screen_title">Backup</string>
@@ -315,21 +319,55 @@
     <string name="backup_restore_hint">Choose a CrewTally backup file to restore. This replaces everything currently on this device.</string>
     <string name="backup_exporting">Preparing backup</string>
     <string name="backup_restoring">Restoring backup</string>
+    <string name="backup_validating_restore">Checking backup file</string>
     <string name="backup_restore_confirm_title">Replace all current data?</string>
-    <string name="backup_restore_confirm_body">This will replace your current data: %1$d companies, %2$d clerks, %3$d projects, %4$d roster entries, %5$d attendance records, %6$d extra-pay lines, %7$d payments. This can\'t be undone.</string>
+    <string name="backup_restore_confirm_body">This will replace your current data: %1$s. This can\'t be undone.</string>
     <string name="backup_restore_confirm_action">Replace data</string>
     <string name="backup_restore_success_title">Restore complete</string>
-    <string name="backup_restore_success_body">Imported %1$d companies, %2$d clerks, %3$d projects, %4$d roster entries, %5$d attendance records, %6$d extra-pay lines, %7$d payments.</string>
+    <string name="backup_restore_success_body">Imported %1$s.</string>
     <string name="backup_restore_error_title">Could not restore this file</string>
     <string name="backup_restore_error_malformed">This file isn\'t a valid CrewTally backup.</string>
     <string name="backup_restore_error_schema_version">This backup was made by a different version of CrewTally and can\'t be restored here.</string>
     <string name="backup_restore_error_missing_field">This backup file is missing required data (%1$s).</string>
     <string name="backup_restore_error_dangling_reference">This backup file has a broken reference (%1$s) and can\'t be trusted.</string>
+    <string name="backup_restore_error_duplicate_id">This backup file has a duplicate id among its %1$s and can\'t be trusted.</string>
+    <string name="backup_restore_error_invalid_amount">This backup file has an invalid amount (%1$s).</string>
     <string name="backup_restore_error_write_failed">Something went wrong while restoring. Your existing data was not changed.</string>
+    <string name="backup_restore_error_too_large">That file is too large to be a CrewTally backup.</string>
+    <string name="backup_restore_error_unreadable">Couldn\'t read that file.</string>
     <string name="backup_done_action">Done</string>
     <string name="backup_nudge_message">It\'s been a while since your last backup.</string>
     <string name="backup_nudge_dismiss">Dismiss</string>
     <string name="backup_nudge_action">Back up now</string>
+
+    <plurals name="backup_count_companies">
+        <item quantity="one">%d company</item>
+        <item quantity="other">%d companies</item>
+    </plurals>
+    <plurals name="backup_count_clerks">
+        <item quantity="one">%d clerk</item>
+        <item quantity="other">%d clerks</item>
+    </plurals>
+    <plurals name="backup_count_projects">
+        <item quantity="one">%d project</item>
+        <item quantity="other">%d projects</item>
+    </plurals>
+    <plurals name="backup_count_roster_entries">
+        <item quantity="one">%d roster entry</item>
+        <item quantity="other">%d roster entries</item>
+    </plurals>
+    <plurals name="backup_count_attendance_records">
+        <item quantity="one">%d attendance record</item>
+        <item quantity="other">%d attendance records</item>
+    </plurals>
+    <plurals name="backup_count_extra_pay_lines">
+        <item quantity="one">%d extra-pay line</item>
+        <item quantity="other">%d extra-pay lines</item>
+    </plurals>
+    <plurals name="backup_count_payments">
+        <item quantity="one">%d payment</item>
+        <item quantity="other">%d payments</item>
+    </plurals>
 
     <!-- Settings (Phase 5) -->
     <string name="settings_screen_title">Settings</string>
@@ -340,5 +378,10 @@
 
     <!-- Privacy (Phase 5) -->
     <string name="privacy_screen_title">Privacy</string>
-    <string name="privacy_policy_body">CrewTally is an offline app. Everything you enter, including companies, clerks, projects, attendance, and payments, stays on this device only. Nothing is sent anywhere.\n\nCrewTally does not collect or transmit any data.\n\nWhen you search your contacts to fill in a clerk or company\'s name and phone number, CrewTally reads that contact information only at that moment, only to show matching suggestions. Nothing from your contacts is stored, sent, or used for any other purpose.\n\nYou can export a backup of your data at any time from More, then Backup, and share that file however you choose. CrewTally never uploads it anywhere on its own.</string>
+    <string name="privacy_section_storage_heading">Data storage</string>
+    <string name="privacy_section_storage_body">CrewTally is an offline app. Everything you enter, including companies, clerks, projects, attendance, and payments, stays on this device only. Nothing is sent anywhere.\n\nCrewTally does not collect or transmit any data.</string>
+    <string name="privacy_section_contacts_heading">Contacts</string>
+    <string name="privacy_section_contacts_body">When you search your contacts to fill in a clerk or company\'s name and phone number, CrewTally reads that contact information only at that moment, only to show matching suggestions. Nothing from your contacts is stored, sent, or used for any other purpose.</string>
+    <string name="privacy_section_backups_heading">Backups</string>
+    <string name="privacy_section_backups_body">You can export a backup of your data at any time from More, then Backup, and share that file however you choose. CrewTally never uploads it anywhere on its own.</string>
 </resources>
