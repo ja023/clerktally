@@ -56,4 +56,16 @@ interface ProjectDao {
      */
     @Query("SELECT currency FROM projects ORDER BY rowid DESC LIMIT 1")
     suspend fun getMostRecentCurrency(): String?
+
+    /** Every project row, verbatim — the backup export's projects table. */
+    @Query("SELECT * FROM projects")
+    suspend fun getAll(): List<ProjectEntity>
+
+    /** Bulk insert used only by [com.vague.crewtally.backup.RestoreWriter] to repopulate from a backup. */
+    @Upsert
+    suspend fun upsertAll(projects: List<ProjectEntity>)
+
+    /** Wipes the table — only [com.vague.crewtally.backup.RestoreWriter] calls this, inside its transaction. */
+    @Query("DELETE FROM projects")
+    suspend fun deleteAll()
 }

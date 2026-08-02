@@ -99,6 +99,16 @@ class FakeAttendanceEntryDao : AttendanceEntryDao {
     override suspend fun countByClerk(clerkId: String): Int =
         entries.value.count { it.clerkId == clerkId }
 
+    override suspend fun getAll(): List<AttendanceEntryEntity> = entries.value
+
+    override suspend fun upsertAll(entries: List<AttendanceEntryEntity>) {
+        this.entries.update { list -> list.filterNot { existing -> entries.any { it.id == existing.id } } + entries }
+    }
+
+    override suspend fun deleteAll() {
+        entries.value = emptyList()
+    }
+
     fun setClerkName(clerkId: String, name: String) {
         clerkNames[clerkId] = name
     }

@@ -47,6 +47,16 @@ class FakePaymentDao : PaymentDao {
     override suspend fun countByClerk(clerkId: String): Int =
         payments.value.count { it.clerkId == clerkId }
 
+    override suspend fun getAll(): List<PaymentEntity> = payments.value
+
+    override suspend fun upsertAll(payments: List<PaymentEntity>) {
+        this.payments.update { list -> list.filterNot { existing -> payments.any { it.id == existing.id } } + payments }
+    }
+
+    override suspend fun deleteAll() {
+        payments.value = emptyList()
+    }
+
     fun seed(vararg entities: PaymentEntity) {
         payments.value = entities.toList()
     }

@@ -51,6 +51,7 @@ import com.vague.crewtally.ui.util.crewTallyDatabase
 fun CompanyFormScreen(
     companyId: String?,
     onDone: () -> Unit,
+    onShareReport: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: CompanyFormViewModel = viewModel(
         factory = LocalContext.current.crewTallyDatabase().let { db ->
@@ -127,6 +128,13 @@ fun CompanyFormScreen(
         )
 
         if (uiState.isEditing) {
+            TextButton(
+                onClick = { onShareReport(requireNotNull(companyId)) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = CrewTallyTheme.dimens.minTarget),
+            ) {
+                Text(text = stringResource(R.string.report_share_company), style = MaterialTheme.typography.labelLarge)
+            }
+
             if (uiState.isArchived) {
                 TextButton(
                     onClick = { showUnarchiveConfirm = true },

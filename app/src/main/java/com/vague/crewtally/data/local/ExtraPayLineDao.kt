@@ -80,4 +80,16 @@ interface ExtraPayLineDao {
         """,
     )
     fun observeExtrasRollupForClerk(clerkId: String): Flow<List<ClerkProjectAmount>>
+
+    /** Every extra-pay line, verbatim — the backup export's extra_pay_lines table. */
+    @Query("SELECT * FROM extra_pay_lines")
+    suspend fun getAll(): List<ExtraPayLineEntity>
+
+    /** Bulk insert used only by [com.vague.crewtally.backup.RestoreWriter] to repopulate from a backup. */
+    @Upsert
+    suspend fun upsertAll(lines: List<ExtraPayLineEntity>)
+
+    /** Wipes the table — only [com.vague.crewtally.backup.RestoreWriter] calls this, inside its transaction. */
+    @Query("DELETE FROM extra_pay_lines")
+    suspend fun deleteAll()
 }

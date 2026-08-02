@@ -73,6 +73,16 @@ class FakeExtraPayLineDao(private val attendance: FakeAttendanceEntryDao) : Extr
             .map { (key, group) -> ClerkProjectAmount(key.first, key.second, group.sumOf { it.second }) }
     }
 
+    override suspend fun getAll(): List<ExtraPayLineEntity> = lines.value
+
+    override suspend fun upsertAll(lines: List<ExtraPayLineEntity>) {
+        this.lines.update { list -> list.filterNot { existing -> lines.any { it.id == existing.id } } + lines }
+    }
+
+    override suspend fun deleteAll() {
+        lines.value = emptyList()
+    }
+
     /** Simulates FK CASCADE: called from [FakeAttendanceEntryDao.delete] when an entry is removed. */
     fun deleteForAttendance(attendanceEntryId: String) {
         lines.update { list -> list.filterNot { it.attendanceEntryId == attendanceEntryId } }

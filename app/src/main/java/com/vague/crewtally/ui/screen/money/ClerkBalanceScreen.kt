@@ -41,6 +41,7 @@ import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.ui.components.CrewTallyButton
+import com.vague.crewtally.ui.screen.report.ReportRoutes
 import com.vague.crewtally.ui.theme.CrewTallyShape
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.theme.CrewTallyType
@@ -116,6 +117,13 @@ fun ClerkBalanceScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
+
+                TextButton(
+                    onClick = { navController.navigate(ReportRoutes.clerkStatement(projectId, clerkId)) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = CrewTallyTheme.dimens.minTarget),
+                ) {
+                    Text(text = stringResource(R.string.report_share_statement), style = MaterialTheme.typography.labelLarge)
+                }
 
                 DaysWorkedSection(
                     presentDays = state.presentDays,

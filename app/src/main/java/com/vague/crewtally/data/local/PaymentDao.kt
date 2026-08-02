@@ -61,4 +61,16 @@ interface PaymentDao {
     /** Used by the clerk delete-eligibility check (Phase 1): a payment row is history. */
     @Query("SELECT COUNT(*) FROM payments WHERE clerkId = :clerkId")
     suspend fun countByClerk(clerkId: String): Int
+
+    /** Every payment row, verbatim — the backup export's payments table. */
+    @Query("SELECT * FROM payments")
+    suspend fun getAll(): List<PaymentEntity>
+
+    /** Bulk insert used only by [com.vague.crewtally.backup.RestoreWriter] to repopulate from a backup. */
+    @Upsert
+    suspend fun upsertAll(payments: List<PaymentEntity>)
+
+    /** Wipes the table — only [com.vague.crewtally.backup.RestoreWriter] calls this, inside its transaction. */
+    @Query("DELETE FROM payments")
+    suspend fun deleteAll()
 }

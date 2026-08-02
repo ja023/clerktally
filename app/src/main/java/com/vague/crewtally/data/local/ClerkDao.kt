@@ -27,4 +27,16 @@ interface ClerkDao {
 
     @Query("SELECT * FROM clerks WHERE id = :id")
     suspend fun getById(id: String): ClerkEntity?
+
+    /** Every clerk row, verbatim — the backup export's clerks table. */
+    @Query("SELECT * FROM clerks")
+    suspend fun getAll(): List<ClerkEntity>
+
+    /** Bulk insert used only by [com.vague.crewtally.backup.RestoreWriter] to repopulate from a backup. */
+    @Upsert
+    suspend fun upsertAll(clerks: List<ClerkEntity>)
+
+    /** Wipes the table — only [com.vague.crewtally.backup.RestoreWriter] calls this, inside its transaction. */
+    @Query("DELETE FROM clerks")
+    suspend fun deleteAll()
 }

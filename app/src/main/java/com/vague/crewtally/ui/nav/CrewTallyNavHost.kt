@@ -35,6 +35,7 @@ import com.vague.crewtally.ui.screen.attendance.AttendanceDayScreen
 import com.vague.crewtally.ui.screen.attendance.AttendanceExtrasScreen
 import com.vague.crewtally.ui.screen.attendance.AttendanceRoutes
 import com.vague.crewtally.ui.screen.attendance.AttendanceWalkInScreen
+import com.vague.crewtally.ui.screen.backup.BackupScreen
 import com.vague.crewtally.ui.screen.clerk.ClerkFormScreen
 import com.vague.crewtally.ui.screen.clerk.ClerkListScreen
 import com.vague.crewtally.ui.screen.clerk.ClerkProfileScreen
@@ -43,6 +44,11 @@ import com.vague.crewtally.ui.screen.company.CompanyListScreen
 import com.vague.crewtally.ui.screen.money.ClerkBalanceScreen
 import com.vague.crewtally.ui.screen.money.MoneyRoutes
 import com.vague.crewtally.ui.screen.money.PaymentFormScreen
+import com.vague.crewtally.ui.screen.report.ClerkStatementShareScreen
+import com.vague.crewtally.ui.screen.report.CompanyReportShareScreen
+import com.vague.crewtally.ui.screen.report.ReportRoutes
+import com.vague.crewtally.ui.screen.settings.PrivacyScreen
+import com.vague.crewtally.ui.screen.settings.SettingsScreen
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import java.time.LocalDate
 
@@ -56,6 +62,10 @@ private object CrewTallyRoutes {
     const val COMPANY_NEW = "companies/new"
     const val COMPANY_EDIT = "companies/{companyId}/edit"
     const val COMPANY_ID_ARG = "companyId"
+
+    const val BACKUP = "backup"
+    const val SETTINGS = "settings"
+    const val SETTINGS_PRIVACY = "settings/privacy"
 }
 
 /**
@@ -151,7 +161,11 @@ fun CrewTallyNavHost() {
                 ClerkFormScreen(clerkId = clerkId, onDone = { navController.popBackStack() })
             }
             composable(CrewTallyDestination.More.route) {
-                MoreScreen(onCompaniesClick = { navController.navigate(CrewTallyRoutes.COMPANIES) })
+                MoreScreen(
+                    onCompaniesClick = { navController.navigate(CrewTallyRoutes.COMPANIES) },
+                    onBackupClick = { navController.navigate(CrewTallyRoutes.BACKUP) },
+                    onSettingsClick = { navController.navigate(CrewTallyRoutes.SETTINGS) },
+                )
             }
             composable(CrewTallyRoutes.COMPANIES) {
                 CompanyListScreen(
@@ -167,7 +181,23 @@ fun CrewTallyNavHost() {
                 arguments = listOf(navArgument(CrewTallyRoutes.COMPANY_ID_ARG) { type = NavType.StringType }),
             ) { backStackEntry ->
                 val companyId = backStackEntry.arguments?.getString(CrewTallyRoutes.COMPANY_ID_ARG)
-                CompanyFormScreen(companyId = companyId, onDone = { navController.popBackStack() })
+                CompanyFormScreen(
+                    companyId = companyId,
+                    onDone = { navController.popBackStack() },
+                    onShareReport = { id -> navController.navigate(ReportRoutes.companyReport(id)) },
+                )
+            }
+            composable(CrewTallyRoutes.BACKUP) {
+                BackupScreen(navController = navController)
+            }
+            composable(CrewTallyRoutes.SETTINGS) {
+                SettingsScreen(
+                    onOpenPrivacy = { navController.navigate(CrewTallyRoutes.SETTINGS_PRIVACY) },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(CrewTallyRoutes.SETTINGS_PRIVACY) {
+                PrivacyScreen(onBack = { navController.popBackStack() })
             }
 
             // --- Phase 2: Projects + roster ------------------------------------------
@@ -333,6 +363,31 @@ fun CrewTallyNavHost() {
                     clerkId = arguments?.getString(MoneyRoutes.CLERK_ID).orEmpty(),
                     paymentId = arguments?.getString(MoneyRoutes.PAYMENT_ID),
                     clerkName = arguments?.getString(MoneyRoutes.CLERK_NAME).orEmpty(),
+                    navController = navController,
+                )
+            }
+
+            // --- Phase 5: Reports + backup + settings --------------------------------
+            composable(
+                route = ReportRoutes.CLERK_STATEMENT_TEMPLATE,
+                arguments = listOf(
+                    navArgument(ReportRoutes.PROJECT_ID) { type = NavType.StringType },
+                    navArgument(ReportRoutes.CLERK_ID) { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val arguments = backStackEntry.arguments
+                ClerkStatementShareScreen(
+                    projectId = arguments?.getString(ReportRoutes.PROJECT_ID).orEmpty(),
+                    clerkId = arguments?.getString(ReportRoutes.CLERK_ID).orEmpty(),
+                    navController = navController,
+                )
+            }
+            composable(
+                route = ReportRoutes.COMPANY_REPORT_TEMPLATE,
+                arguments = listOf(navArgument(ReportRoutes.COMPANY_ID) { type = NavType.StringType }),
+            ) { backStackEntry ->
+                CompanyReportShareScreen(
+                    companyId = backStackEntry.arguments?.getString(ReportRoutes.COMPANY_ID).orEmpty(),
                     navController = navController,
                 )
             }

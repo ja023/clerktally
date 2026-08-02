@@ -108,4 +108,16 @@ interface AttendanceEntryDao {
     /** Used by the clerk delete-eligibility check (Phase 1): an attendance row is history. */
     @Query("SELECT COUNT(*) FROM attendance_entries WHERE clerkId = :clerkId")
     suspend fun countByClerk(clerkId: String): Int
+
+    /** Every attendance row, verbatim — the backup export's attendance_entries table. */
+    @Query("SELECT * FROM attendance_entries")
+    suspend fun getAll(): List<AttendanceEntryEntity>
+
+    /** Bulk insert used only by [com.vague.crewtally.backup.RestoreWriter] to repopulate from a backup. */
+    @Upsert
+    suspend fun upsertAll(entries: List<AttendanceEntryEntity>)
+
+    /** Wipes the table — only [com.vague.crewtally.backup.RestoreWriter] calls this, inside its transaction. */
+    @Query("DELETE FROM attendance_entries")
+    suspend fun deleteAll()
 }

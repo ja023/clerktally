@@ -53,6 +53,21 @@ class FakeRosterEntryDao : RosterEntryDao {
     override suspend fun getActiveDailyRate(projectId: String, clerkId: String): Long? =
         entries.find { it.projectId == projectId && it.clerkId == clerkId && it.removedAt == null }?.dailyRate
 
+    override suspend fun getAll(): List<RosterEntryEntity> = entries.toList()
+
+    override suspend fun upsertAll(entries: List<RosterEntryEntity>) {
+        entries.forEach { entry ->
+            val index = this.entries.indexOfFirst { it.id == entry.id }
+            if (index >= 0) this.entries[index] = entry else this.entries.add(entry)
+        }
+        entriesFlow.value = this.entries.toList()
+    }
+
+    override suspend fun deleteAll() {
+        entries.clear()
+        entriesFlow.value = emptyList()
+    }
+
     fun setClerkName(clerkId: String, name: String) {
         clerkNames[clerkId] = name
     }

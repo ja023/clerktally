@@ -3,7 +3,6 @@ package com.vague.crewtally.ui.screen.clerk
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,7 +17,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -36,9 +34,9 @@ import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.balance.CurrencyTotal
+import com.vague.crewtally.ui.components.CrewTallyCurrencyTotalCard
 import com.vague.crewtally.ui.components.CrewTallyListRow
 import com.vague.crewtally.ui.screen.money.MoneyRoutes
-import com.vague.crewtally.ui.theme.CrewTallyShape
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.theme.CrewTallyType
 import com.vague.crewtally.ui.util.owedDisplayText
@@ -149,9 +147,6 @@ private fun CurrencyTotalCard(total: CurrencyTotal, modifier: Modifier = Modifie
     val earnedText = Money.formatWithSymbol(total.earned, symbol)
     val paidText = Money.formatWithSymbol(total.paid, symbol)
     val owedText = owedDisplayText(total.owed, symbol)
-    val earnedLabel = stringResource(R.string.profile_earned_label)
-    val paidLabel = stringResource(R.string.profile_paid_label)
-    val owedLabel = stringResource(R.string.profile_owed_label)
     // Spoken form uses the full currency name ("US Dollar") — the visible label below stays
     // the 3-letter code, which a screen reader would otherwise spell out letter by letter.
     val cardDescription = stringResource(
@@ -161,45 +156,17 @@ private fun CurrencyTotalCard(total: CurrencyTotal, modifier: Modifier = Modifie
         paidText,
         owedText,
     )
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = CrewTallyShape.card,
-        tonalElevation = CrewTallyTheme.dimens.elevationCard,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(CrewTallyTheme.dimens.spaceLg)
-                .semantics(mergeDescendants = true) { contentDescription = cardDescription },
-            verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceSm),
-        ) {
-            Text(
-                text = total.currency,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            TotalLine(label = earnedLabel, value = earnedText)
-            TotalLine(label = paidLabel, value = paidText)
-            TotalLine(label = owedLabel, value = owedText, emphasise = true)
-        }
-    }
-}
-
-@Composable
-private fun TotalLine(label: String, value: String, emphasise: Boolean = false, modifier: Modifier = Modifier) {
-    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = value,
-            style = if (emphasise) CrewTallyType.moneySmall else MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
+    CrewTallyCurrencyTotalCard(
+        currencyCode = total.currency,
+        earnedLabel = stringResource(R.string.profile_earned_label),
+        paidLabel = stringResource(R.string.profile_paid_label),
+        owedLabel = stringResource(R.string.profile_owed_label),
+        earnedText = earnedText,
+        paidText = paidText,
+        owedText = owedText,
+        contentDescription = cardDescription,
+        modifier = modifier,
+    )
 }
 
 @Composable

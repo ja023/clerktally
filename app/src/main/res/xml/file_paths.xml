@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backs the FileProvider declared in AndroidManifest.xml. Only cacheDir/shared/ is exposed —
+     everything AndroidReportFileWriter writes and nothing else — so the share sheet can never
+     read any other file CrewTally holds. -->
+<paths>
+    <cache-path name="shared" path="shared/" />
+</paths>

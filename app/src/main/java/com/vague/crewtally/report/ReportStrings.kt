@@ -1,0 +1,36 @@
+package com.vague.crewtally.report
+
+/**
+ * Every label [ReportLines] needs, resolved from `strings.xml` by the caller (a ViewModel, via
+ * `Context.getString`) before reaching this pure package — LOCKED decision #4 requires every
+ * user-facing string live in resources, but [ReportLines] itself has no Android [Context] so it
+ * cannot call `getString` directly. Passing a fully-resolved bundle in keeps report generation
+ * pure/testable while keeping every word translator-visible.
+ *
+ * [owedPhraseOwedTemplate] / [owedPhraseAdvanceTemplate] are the raw `%1$s`-style templates from
+ * `owed_phrase_owed` / `owed_phrase_advance` (fetched WITHOUT formatting args), so [ReportLines]
+ * can format them itself once it has computed the money string.
+ */
+data class ReportStrings(
+    val appName: String,
+    val clerkStatementTitle: String,
+    val companyReportTitle: String,
+    val daysWorkedLabel: String,
+    val extrasLabel: String,
+    val paymentsLabel: String,
+    val earnedLabel: String,
+    val paidLabel: String,
+    val owedLabel: String,
+    val deductionLabel: String,
+    val presentLabel: String,
+    val absentLabel: String,
+    val noneRecordedLabel: String,
+    val projectLabel: String,
+    val grandTotalLabel: String,
+    val owedPhraseOwedTemplate: String,
+    val owedPhraseAdvanceTemplate: String,
+    val owedPhraseSettled: String,
+    val summaryLineTemplate: String,
+    /** Raw `%1$d`/`%2$d` template for the PDF footer, e.g. "Page %1$d of %2$d". */
+    val pageLabelTemplate: String,
+)

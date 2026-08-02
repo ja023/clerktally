@@ -69,4 +69,16 @@ interface RosterEntryDao {
      */
     @Query("SELECT dailyRate FROM roster_entries WHERE projectId = :projectId AND clerkId = :clerkId AND removedAt IS NULL LIMIT 1")
     suspend fun getActiveDailyRate(projectId: String, clerkId: String): Long?
+
+    /** Every roster row (active and soft-removed), verbatim — the backup export's roster_entries table. */
+    @Query("SELECT * FROM roster_entries")
+    suspend fun getAll(): List<RosterEntryEntity>
+
+    /** Bulk insert used only by [com.vague.crewtally.backup.RestoreWriter] to repopulate from a backup. */
+    @Upsert
+    suspend fun upsertAll(entries: List<RosterEntryEntity>)
+
+    /** Wipes the table — only [com.vague.crewtally.backup.RestoreWriter] calls this, inside its transaction. */
+    @Query("DELETE FROM roster_entries")
+    suspend fun deleteAll()
 }

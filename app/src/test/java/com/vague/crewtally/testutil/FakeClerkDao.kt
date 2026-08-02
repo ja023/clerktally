@@ -34,6 +34,16 @@ class FakeClerkDao : ClerkDao {
 
     override suspend fun getById(id: String): ClerkEntity? = clerks.value.find { it.id == id }
 
+    override suspend fun getAll(): List<ClerkEntity> = clerks.value
+
+    override suspend fun upsertAll(clerks: List<ClerkEntity>) {
+        this.clerks.update { list -> list.filterNot { existing -> clerks.any { it.id == existing.id } } + clerks }
+    }
+
+    override suspend fun deleteAll() {
+        clerks.value = emptyList()
+    }
+
     /** Test setup helper — seeds the store directly, bypassing [upsert]. */
     fun seed(vararg entities: ClerkEntity) {
         clerks.value = entities.toList()

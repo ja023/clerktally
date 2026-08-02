@@ -33,6 +33,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Phase 5: grants the system share sheet temporary read access to generated report
+             PDFs/text and backup JSON files under cacheDir/shared/ — never external storage,
+             never a broadly-exported provider (android:exported="false", grantUriPermissions
+             scoped per-Uri by FileProvider itself). See ui/util/ShareFile.kt. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

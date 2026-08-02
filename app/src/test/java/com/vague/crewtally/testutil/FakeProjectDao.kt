@@ -58,6 +58,21 @@ class FakeProjectDao : ProjectDao {
     override suspend fun countByCompany(companyId: String): Int =
         entries.count { it.companyId == companyId }
 
+    override suspend fun getAll(): List<ProjectEntity> = entries.toList()
+
+    override suspend fun upsertAll(projects: List<ProjectEntity>) {
+        projects.forEach { project ->
+            val index = entries.indexOfFirst { it.id == project.id }
+            if (index >= 0) entries[index] = project else entries.add(project)
+        }
+        entriesFlow.value = entries.toList()
+    }
+
+    override suspend fun deleteAll() {
+        entries.clear()
+        entriesFlow.value = emptyList()
+    }
+
     fun seed(vararg projects: ProjectEntity) {
         entries.addAll(projects)
         entriesFlow.value = entries.toList()

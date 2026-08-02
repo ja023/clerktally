@@ -15,7 +15,6 @@
     <string name="more_companies">Companies</string>
     <string name="more_backup">Backup</string>
     <string name="more_settings">Settings</string>
-    <string name="more_row_disabled_hint">Available in a later update</string>
 
     <!-- Content descriptions -->
     <string name="cd_nav_home">Home tab</string>
@@ -280,4 +279,66 @@
     <string name="profile_owed_label">Owed</string>
     <string name="profile_currency_total_description">%1$s. Earned %2$s. Paid %3$s. %4$s.</string>
     <string name="profile_project_row_description">%1$s. %2$s.</string>
+
+    <!-- Reports (Phase 5) -->
+    <string name="report_share_statement">Share statement</string>
+    <string name="report_share_company">Share company report</string>
+    <string name="report_clerk_share_title">Statement</string>
+    <string name="report_company_share_title">Company report</string>
+    <string name="report_share_as_text">Share as text</string>
+    <string name="report_share_as_pdf">Share as PDF</string>
+    <string name="report_preparing">Preparing report</string>
+    <string name="report_clerk_no_activity">No activity yet on this project.</string>
+    <string name="report_company_no_projects">No projects yet for this company.</string>
+    <string name="report_clerk_statement_title">Clerk Statement</string>
+    <string name="report_company_report_title">Company Report</string>
+    <string name="report_days_worked_label">Days worked</string>
+    <string name="report_extras_label">Extras</string>
+    <string name="report_payments_label">Payments</string>
+    <string name="report_earned_label">Earned</string>
+    <string name="report_paid_label">Paid</string>
+    <string name="report_owed_label">Owed</string>
+    <string name="report_deduction_label">Deduction</string>
+    <string name="report_present_label">Present</string>
+    <string name="report_absent_label">Absent</string>
+    <string name="report_none_recorded">None recorded</string>
+    <string name="report_project_label">Project</string>
+    <string name="report_grand_total_label">Grand total</string>
+    <string name="report_summary_line_template">%1$s: %2$d days x %3$s, extras %4$s, paid %5$s, %6$s</string>
+    <string name="report_page_label_template">Page %1$d of %2$d</string>
+
+    <!-- Backup (Phase 5) -->
+    <string name="backup_screen_title">Backup</string>
+    <string name="backup_export_action">Export backup</string>
+    <string name="backup_export_hint">Creates a single file with all your companies, clerks, projects, and history. Share it somewhere safe.</string>
+    <string name="backup_restore_action">Restore from backup</string>
+    <string name="backup_restore_hint">Choose a CrewTally backup file to restore. This replaces everything currently on this device.</string>
+    <string name="backup_exporting">Preparing backup</string>
+    <string name="backup_restoring">Restoring backup</string>
+    <string name="backup_restore_confirm_title">Replace all current data?</string>
+    <string name="backup_restore_confirm_body">This will replace your current data: %1$d companies, %2$d clerks, %3$d projects, %4$d roster entries, %5$d attendance records, %6$d extra-pay lines, %7$d payments. This can\'t be undone.</string>
+    <string name="backup_restore_confirm_action">Replace data</string>
+    <string name="backup_restore_success_title">Restore complete</string>
+    <string name="backup_restore_success_body">Imported %1$d companies, %2$d clerks, %3$d projects, %4$d roster entries, %5$d attendance records, %6$d extra-pay lines, %7$d payments.</string>
+    <string name="backup_restore_error_title">Could not restore this file</string>
+    <string name="backup_restore_error_malformed">This file isn\'t a valid CrewTally backup.</string>
+    <string name="backup_restore_error_schema_version">This backup was made by a different version of CrewTally and can\'t be restored here.</string>
+    <string name="backup_restore_error_missing_field">This backup file is missing required data (%1$s).</string>
+    <string name="backup_restore_error_dangling_reference">This backup file has a broken reference (%1$s) and can\'t be trusted.</string>
+    <string name="backup_restore_error_write_failed">Something went wrong while restoring. Your existing data was not changed.</string>
+    <string name="backup_done_action">Done</string>
+    <string name="backup_nudge_message">It\'s been a while since your last backup.</string>
+    <string name="backup_nudge_dismiss">Dismiss</string>
+    <string name="backup_nudge_action">Back up now</string>
+
+    <!-- Settings (Phase 5) -->
+    <string name="settings_screen_title">Settings</string>
+    <string name="settings_nudge_toggle_label">Remind me to back up</string>
+    <string name="settings_about_heading">About</string>
+    <string name="settings_version_label">Version %1$s</string>
+    <string name="settings_privacy_row">Privacy</string>
+
+    <!-- Privacy (Phase 5) -->
+    <string name="privacy_screen_title">Privacy</string>
+    <string name="privacy_policy_body">CrewTally is an offline app. Everything you enter, including companies, clerks, projects, attendance, and payments, stays on this device only. Nothing is sent anywhere.\n\nCrewTally does not collect or transmit any data.\n\nWhen you search your contacts to fill in a clerk or company\'s name and phone number, CrewTally reads that contact information only at that moment, only to show matching suggestions. Nothing from your contacts is stored, sent, or used for any other purpose.\n\nYou can export a backup of your data at any time from More, then Backup, and share that file however you choose. CrewTally never uploads it anywhere on its own.</string>
 </resources>

@@ -1,6 +1,8 @@
 package com.vague.crewtally
 
 import android.app.Application
+import com.vague.crewtally.backup.RestoreWriter
+import com.vague.crewtally.backup.RoomRestoreWriter
 import com.vague.crewtally.data.local.AttendanceWriter
 import com.vague.crewtally.data.local.CrewTallyDatabase
 import com.vague.crewtally.data.local.PaymentWriter
@@ -8,6 +10,8 @@ import com.vague.crewtally.data.local.ProjectRosterWriter
 import com.vague.crewtally.data.local.RoomAttendanceWriter
 import com.vague.crewtally.data.local.RoomPaymentWriter
 import com.vague.crewtally.data.local.RoomProjectRosterWriter
+import com.vague.crewtally.report.AndroidReportFileWriter
+import com.vague.crewtally.report.ReportFileWriter
 
 /**
  * Application entry point. Owns the single Room database instance for the process, which
@@ -33,4 +37,10 @@ class CrewTallyApplication : Application() {
     val paymentWriter: PaymentWriter by lazy { RoomPaymentWriter(database) }
     val attendanceWriter: AttendanceWriter by lazy { RoomAttendanceWriter(database) }
     val projectRosterWriter: ProjectRosterWriter by lazy { RoomProjectRosterWriter(database) }
+
+    /** Phase 5: the whole-database restore writer (same one-instance-per-app rule as above). */
+    val restoreWriter: RestoreWriter by lazy { RoomRestoreWriter(database) }
+
+    /** Phase 5: writes generated report/backup files under `cacheDir/shared/` for the share sheet. */
+    val reportFileWriter: ReportFileWriter by lazy { AndroidReportFileWriter(this) }
 }

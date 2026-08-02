@@ -30,6 +30,16 @@ class FakeCompanyDao : CompanyDao {
 
     override suspend fun getById(id: String): CompanyEntity? = companies.value.find { it.id == id }
 
+    override suspend fun getAll(): List<CompanyEntity> = companies.value
+
+    override suspend fun upsertAll(companies: List<CompanyEntity>) {
+        this.companies.update { list -> list.filterNot { existing -> companies.any { it.id == existing.id } } + companies }
+    }
+
+    override suspend fun deleteAll() {
+        companies.value = emptyList()
+    }
+
     fun seed(vararg entities: CompanyEntity) {
         companies.value = entities.toList()
     }
