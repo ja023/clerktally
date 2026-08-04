@@ -92,7 +92,10 @@ val CrewTallyLightScheme = lightColorScheme(
 /** Dark Material 3 scheme — same semantic roles, inverted neutrals, brightened brand. */
 val CrewTallyDarkScheme = darkColorScheme(
     primary = CrewTallyPalette.BlueLight,
-    onPrimary = CrewTallyPalette.OnBlueContainer,
+    // White, not OnBlueContainer: BlueLight is a mid-tone brand blue, and OnBlueContainer
+    // (#0B2740 on #3A6FA0 ~= 2.87:1) fails WCAG AA. White clears ~5.3:1, matching the
+    // tertiary/onTertiary pairing below which uses the same BlueLight surface.
+    onPrimary = CrewTallyPalette.White,
     primaryContainer = CrewTallyPalette.BlueDark,
     onPrimaryContainer = CrewTallyPalette.BlueContainer,
     secondary = CrewTallyPalette.Green,

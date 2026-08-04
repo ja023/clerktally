@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -63,6 +64,8 @@ fun ClerkFormScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var attemptedSave by remember { mutableStateOf(false) }
+    // IME "Next" chaining: name -> phone (inside ContactSearchField) -> notes.
+    val notesFocusRequester = remember { FocusRequester() }
     var showArchiveConfirm by remember { mutableStateOf(false) }
     var showUnarchiveConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -99,6 +102,7 @@ fun ClerkFormScreen(
             } else {
                 null
             },
+            onImeNext = { notesFocusRequester.requestFocus() },
         )
 
         CrewTallyTextField(
@@ -107,7 +111,10 @@ fun ClerkFormScreen(
             label = stringResource(R.string.field_notes),
             singleLine = false,
             minLines = 3,
+            // Notes stays a plain multiline field (default IME) so Enter inserts a line break —
+            // an imeAction here would replace the newline key, which is worse for free-text notes.
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+            focusRequester = notesFocusRequester,
         )
 
         CrewTallyButton(

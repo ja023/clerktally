@@ -13,3 +13,9 @@ local.properties
 !debug.keystore
 /app/release
 .claude/
+
+# Release signing — never commit the keystore or the properties that hold its password.
+# The keystore itself lives outside the repo (/home/jad/.crewtally-release/), but guard the
+# extension anyway in case a copy ever lands here.
+*.jks
+keystore.properties

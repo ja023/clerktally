@@ -1,9 +1,26 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+}
+
+// Release signing credentials live in keystore.properties at the repo root — gitignored, and
+// pointing storeFile at a keystore kept OUTSIDE the repo. When the file is absent (a fresh
+// clone, CI without secrets), the release signingConfig is simply not created and a release
+// build stays unsigned rather than failing to configure. See /home/jad/.crewtally-release/README.txt.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+val hasReleaseSigning = keystoreProperties.getProperty("storeFile")?.let { file(it).exists() } == true
+if (!hasReleaseSigning) {
+    logger.warn("CrewTally: building UNSIGNED release — keystore.properties/storeFile not found")
 }
 
 android {
@@ -15,10 +32,21 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -29,6 +57,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -89,6 +120,11 @@ dependencies {
     // Test (JVM unit — headless)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Robolectric backs the contacts-infrastructure tests (ContactsSearcher's ContentResolver
+    // queries, ContactsPermissionStore's SharedPreferences) with a working Android Context on
+    // the JVM — see review-debt note in CLAUDE.md.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
 
     // Test (instrumented — needs a device/emulator)
     androidTestImplementation(libs.androidx.junit)

@@ -131,15 +131,31 @@ Phases 3→6 run WITHOUT check-in questions: build → 3-reviewer pass (kotlin, 
 
 ## Review debt (accepted findings, deliberately deferred — address in the phase noted)
 
-- **Wizard step transitions don't move AT focus** to the new step's first field (CreateProject, AddRosterClerk, AttendanceWalkIn — liveRegion announcement exists, focus move doesn't). Phase 6 polish, fix all three together with one FocusRequester pattern.
+Paid down in Phase 6 (2026-08-04): wizard-step focus move (EntryFocus.kt pattern), IME action
+chaining, Robolectric contact-search tests (10 tests), plus the Phase 6 gate's CRITICAL/HIGH
+fixes (dark-theme onPrimary contrast, 14sp nav labels, LazyColumn focus-steal, liveRegion/focus
+double-announcement).
 
-- **Extract shared `RecordLifecycleActions` composable** (archive/unarchive/delete buttons + 3 confirm dialogs, ~70 lines duplicated between ClerkFormScreen and CompanyFormScreen) — do this in Phase 3 BEFORE a third form copies the pattern.
-- **Contact-search tests**: ContactsSearcher LIKE-escaping, union+dedupe, ContactsPermissionStore ask-once — needs Robolectric; add when a Robolectric setup exists (Phase 5/6).
-- **IME action chaining** Name→Phone→Notes→Save in forms (Phase 6 polish).
+Remaining (post-release polish unless noted):
+
+- **SoftNotice tone** (AttendanceDayScreen ~202): backfill / future-date / project-completed
+  notices reuse `errorContainer` red although they're informational warn-don't-block notices.
+  A11y sweep suggests a calmer semantic container; touches the Phase 3 warn treatment, so it's
+  Jad's call — ask before changing.
+- **ContactSearchField suggestion liveRegion** re-announces the full ≤5-row list on every
+  debounced keystroke; consider announcing only a match count while typing. Needs real TalkBack
+  device verification before changing.
+- **CrewTallyOutlinedButton dark-theme contrast** ~3.5:1 (primary BlueLight on dark surface) —
+  borderline AA for 18sp SemiBold. Revisit the dark `primary` token with a visual check.
+- **No "Saving…" liveRegion status** on ordinary form saves (local Room writes, near-instant;
+  BackupScreen already does it right). Completeness only.
+- **Extract shared `RecordLifecycleActions` composable** (archive/unarchive/delete buttons + 3
+  confirm dialogs, ~70 lines duplicated between ClerkFormScreen and CompanyFormScreen) — NOT
+  done during v1 build; deliberately skipped at the Phase 6 ship gate (pure refactor, no user
+  impact). Do it before any third form copies the pattern.
 - **Nav route builders** instead of literal `"clerks/$id/edit"` templates (whenever nav is next touched).
 - **Permission re-check on resume** in ContactSearchField (granted via system Settings while form open) — only if it shows up in real use.
-- **Disabled More-rows** need a visual (not just semantic) disabled treatment (Phase 5 when Backup/Settings go live anyway).
-- ⚠️ **Type.kt `labelMedium`/`labelSmall` are 14sp** — currently unused for body content; never reach for them for anything a user must read (locked ≥16sp rule).
+- ⚠️ **Type.kt `labelMedium`/`labelSmall` are 14sp** — never reach for them for anything a user must read (locked ≥16sp rule). (Phase 6 removed the one violation: bottom-nav labels.)
 
 ## Deferred / v2 candidates
 

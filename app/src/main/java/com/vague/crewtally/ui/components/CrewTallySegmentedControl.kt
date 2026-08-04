@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,7 +54,7 @@ fun <T> CrewTallySegmentedControl(
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = CrewTallyTheme.dimens.primaryTarget)
-                        .clip(RoundedCornerShape(CrewTallyTheme.radius.pill))
+                        .clip(CrewTallyShape.pill)
                         .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .selectable(
                             selected = isSelected,

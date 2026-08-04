@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
@@ -18,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -25,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.core.content.ContextCompat
 import com.vague.crewtally.R
@@ -51,6 +54,14 @@ private const val SEARCH_DEBOUNCE_MS = 250L
  * field gains focus, if `READ_CONTACTS` has never been asked for before, it requests the
  * permission once via [ContactsPermissionStore]. If denied (now or already), the field
  * quietly behaves as a plain text field forever — no error, no repeat prompts.
+ *
+ * IME chaining (Phase 6 review-debt paydown): the name field's keyboard shows "Next", which
+ * jumps to the phone field via an internal [FocusRequester] — deliberately explicit rather
+ * than a directional `moveFocus`, so pressing Next while suggestions are on screen lands on
+ * the phone field instead of the first suggestion row. When [onImeNext] is supplied the phone
+ * field also shows "Next" and invokes it (the caller moves focus on to the following field,
+ * e.g. Notes). [nameFocusRequester] lets a preceding field (the company form's separate name
+ * field) chain INTO this component's name field.
  */
 @Composable
 fun ContactSearchField(
@@ -64,12 +75,15 @@ fun ContactSearchField(
     namePlaceholder: String? = null,
     isNameError: Boolean = false,
     nameSupportingText: String? = null,
+    nameFocusRequester: FocusRequester? = null,
+    onImeNext: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val searcher = remember(context) { ContactsSearcher(context) }
     val permissionStore = remember(context) { ContactsPermissionStore(context) }
     val keyboard = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
+    val phoneFocusRequester = remember { FocusRequester() }
 
     var hasPermission by remember {
         mutableStateOf(
@@ -129,6 +143,9 @@ fun ContactSearchField(
             leadingIcon = Icons.Filled.Person,
             isError = isNameError,
             supportingText = nameSupportingText,
+            focusRequester = nameFocusRequester,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onNext = { phoneFocusRequester.requestFocus() }),
             onFocusChanged = { focusState ->
                 isNameFocused = focusState.isFocused
                 if (focusState.isFocused && !hasPermission && !permissionStore.hasRequestedOnce) {
@@ -163,7 +180,12 @@ fun ContactSearchField(
             onValueChange = onPhoneChange,
             label = phoneLabel,
             leadingIcon = Icons.Filled.Phone,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            focusRequester = phoneFocusRequester,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Phone,
+                imeAction = if (onImeNext != null) ImeAction.Next else ImeAction.Default,
+            ),
+            keyboardActions = KeyboardActions(onNext = { onImeNext?.invoke() }),
         )
     }
 }

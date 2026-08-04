@@ -18,15 +18,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
+import com.vague.crewtally.ui.util.wizardStepTitleSemantics
 import com.vague.crewtally.ui.viewmodel.CreateProjectEvent
 import com.vague.crewtally.ui.viewmodel.CreateProjectStep
 import com.vague.crewtally.ui.viewmodel.CreateProjectViewModel
@@ -76,11 +73,14 @@ fun CreateProjectScreen(navController: NavController, modifier: Modifier = Modif
                             CreateProjectStep.RATES -> stringResource(R.string.create_project_step_rates_title)
                         },
                         // The title is the only signal a step changed — no new screen, no
-                        // nav transition TalkBack would otherwise announce on its own.
-                        modifier = Modifier.semantics {
-                            heading()
-                            liveRegion = LiveRegionMode.Polite
-                        },
+                        // nav transition TalkBack would otherwise announce on its own. RATES
+                        // auto-focuses its first field (see CreateProjectRatesStep), which
+                        // races this liveRegion announcement in TalkBack, so RATES folds the
+                        // step title into the focused field's accessibility label instead and
+                        // skips the liveRegion here.
+                        modifier = Modifier.wizardStepTitleSemantics(
+                            announceTitle = state.step != CreateProjectStep.RATES,
+                        ),
                     )
                 },
                 navigationIcon = {

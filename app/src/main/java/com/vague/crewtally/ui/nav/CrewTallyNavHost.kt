@@ -116,7 +116,7 @@ fun CrewTallyNavHost() {
                         label = {
                             Text(
                                 text = label,
-                                style = MaterialTheme.typography.labelMedium,
+                                style = MaterialTheme.typography.labelLarge,
                             )
                         },
                         alwaysShowLabel = true,

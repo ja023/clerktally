@@ -1,23 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generic placeholder mark: a simple tally / checklist glyph on the adaptive
-     foreground layer. Replaced with the final icon in the Play-packaging phase. -->
+<!--
+  CrewTally launcher foreground: the universal counting mark — four vertical strokes plus a
+  diagonal fifth stroke crossing them (a "tally of five"). Hand-authored geometry, no external
+  tooling. Strokes are near-white with bold, round-capped weight so the mark reads at 48px, and
+  the whole cluster sits inside the adaptive-icon safe zone (the central ~66dp circle of the
+  108dp canvas) so no mark is clipped by any launcher mask shape.
+
+  This same drawable is reused as the adaptive icon's monochrome layer (see
+  mipmap-anydpi-v26/ic_launcher.xml): Android 13+ themed icons ignore these colors and re-tint
+  the shape from the drawable's alpha, so the identical strokes carry both the colored and the
+  themed icon.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group android:scaleX="1.0" android:scaleY="1.0">
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M39,38h34a3,3 0 0 1 3,3v3a3,3 0 0 1 -3,3h-34a3,3 0 0 1 -3,-3v-3a3,3 0 0 1 3,-3z" />
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M39,51h34a3,3 0 0 1 3,3v3a3,3 0 0 1 -3,3h-34a3,3 0 0 1 -3,-3v-3a3,3 0 0 1 3,-3z" />
-        <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M39,64h20a3,3 0 0 1 3,3v3a3,3 0 0 1 -3,3h-20a3,3 0 0 1 -3,-3v-3a3,3 0 0 1 3,-3z" />
-        <path
-            android:fillColor="#8FC1E3"
-            android:pathData="M64,68l4,4l8,-8l3,3l-11,11l-7,-7z" />
-    </group>
+
+    <!-- Four vertical strokes, evenly spaced. -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M41,38 L41,70" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M50,38 L50,70" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M59,38 L59,70" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M68,38 L68,70" />
+
+    <!-- The diagonal fifth stroke, lower-left to upper-right, crossing all four. -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:pathData="M35,71 L74,37" />
 </vector>

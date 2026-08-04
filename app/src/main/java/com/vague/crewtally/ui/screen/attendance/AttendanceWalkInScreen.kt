@@ -27,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,6 +42,9 @@ import com.vague.crewtally.ui.components.CrewTallyCheckboxRow
 import com.vague.crewtally.ui.components.CrewTallyListRow
 import com.vague.crewtally.ui.components.CrewTallyTextField
 import com.vague.crewtally.ui.theme.CrewTallyTheme
+import com.vague.crewtally.ui.util.entryFocusFieldLabel
+import com.vague.crewtally.ui.util.rememberEntryFocusRequester
+import com.vague.crewtally.ui.util.wizardStepTitleSemantics
 import com.vague.crewtally.ui.viewmodel.AttendanceWalkInEvent
 import com.vague.crewtally.ui.viewmodel.AttendanceWalkInStep
 import com.vague.crewtally.ui.viewmodel.AttendanceWalkInViewModel
@@ -92,10 +94,15 @@ fun AttendanceWalkInScreen(
                         } else {
                             stringResource(R.string.walk_in_rate_title)
                         },
-                        modifier = Modifier.semantics {
-                            heading()
-                            liveRegion = LiveRegionMode.Polite
-                        },
+                        // The title is the only signal a step changed — no new screen, no
+                        // nav transition TalkBack would otherwise announce on its own. RATE
+                        // auto-focuses its rate field below, which races this liveRegion
+                        // announcement in TalkBack, so RATE folds the step title into the
+                        // focused field's accessibility label instead and skips the liveRegion
+                        // here.
+                        modifier = Modifier.wizardStepTitleSemantics(
+                            announceTitle = state.step != AttendanceWalkInStep.RATE,
+                        ),
                     )
                 },
                 navigationIcon = {
@@ -127,14 +134,25 @@ fun AttendanceWalkInScreen(
                     .padding(CrewTallyTheme.dimens.screenEdge),
                 verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceLg),
             ) {
+                // Step transition PICK -> RATE moves focus (and the TalkBack cursor) onto the
+                // rate field so the user lands ready to type (Phase 6 review-debt paydown). The
+                // title's liveRegion is suppressed for this step (see above), so this field's
+                // accessibility label carries the step orientation instead.
+                val rateFocusRequester = rememberEntryFocusRequester()
+                val rateFieldLabel = stringResource(R.string.roster_rate_field_label_for_clerk, state.selectedClerkName)
                 CrewTallyTextField(
-                    label = stringResource(R.string.roster_rate_field_label_for_clerk, state.selectedClerkName),
+                    label = rateFieldLabel,
+                    accessibilityLabel = entryFocusFieldLabel(
+                        stepTitle = stringResource(R.string.walk_in_rate_title),
+                        fieldLabel = rateFieldLabel,
+                    ),
                     value = state.rateInput,
                     onValueChange = { viewModel.onEvent(AttendanceWalkInEvent.RateChanged(it)) },
                     leadingText = CurrencyCodes.symbolFor(currency),
                     isError = state.rateError,
                     supportingText = if (state.rateError) stringResource(R.string.rates_error_required) else null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    focusRequester = rateFocusRequester,
                 )
                 CrewTallyCheckboxRow(
                     title = stringResource(R.string.walk_in_also_add_to_roster),

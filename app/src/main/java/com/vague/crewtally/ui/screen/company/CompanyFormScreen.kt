@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
@@ -20,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -62,6 +64,9 @@ fun CompanyFormScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var attemptedSave by remember { mutableStateOf(false) }
+    // IME "Next" chaining: name -> contact person -> phone (both inside ContactSearchField) -> notes.
+    val contactPersonFocusRequester = remember { FocusRequester() }
+    val notesFocusRequester = remember { FocusRequester() }
     var showArchiveConfirm by remember { mutableStateOf(false) }
     var showUnarchiveConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -94,6 +99,8 @@ fun CompanyFormScreen(
             } else {
                 null
             },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onNext = { contactPersonFocusRequester.requestFocus() }),
         )
 
         ContactSearchField(
@@ -104,6 +111,8 @@ fun CompanyFormScreen(
             nameLabel = stringResource(R.string.field_contact_person),
             phoneLabel = stringResource(R.string.field_phone),
             namePlaceholder = stringResource(R.string.field_name_search_placeholder),
+            nameFocusRequester = contactPersonFocusRequester,
+            onImeNext = { notesFocusRequester.requestFocus() },
         )
 
         CrewTallyTextField(
@@ -112,7 +121,9 @@ fun CompanyFormScreen(
             label = stringResource(R.string.field_notes),
             singleLine = false,
             minLines = 3,
+            // Notes stays a plain multiline field (default IME) so Enter inserts a line break.
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+            focusRequester = notesFocusRequester,
         )
 
         if (uiState.isEditing) {
