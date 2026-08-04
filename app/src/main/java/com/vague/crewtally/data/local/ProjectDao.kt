@@ -50,6 +50,24 @@ interface ProjectDao {
     fun observeSummariesByStatus(status: ProjectStatus): Flow<List<ProjectSummary>>
 
     /**
+     * Every project regardless of status, pre-joined the same way as
+     * [observeSummariesByStatus] — the v1.1 project statement picker's full list (LOCKED:
+     * "include completed projects too"), unlike the Projects tab which is always scoped to one
+     * Active/Completed segment.
+     */
+    @Query(
+        """
+        SELECT p.*, COALESCE(c.name, '') AS companyName,
+            (SELECT COUNT(*) FROM roster_entries r
+                WHERE r.projectId = p.id AND r.removedAt IS NULL) AS rosterSize
+        FROM projects p
+        LEFT JOIN companies c ON c.id = p.companyId
+        ORDER BY p.startDate DESC
+        """,
+    )
+    fun observeAllSummaries(): Flow<List<ProjectSummary>>
+
+    /**
      * The currency of the most recently CREATED project (ordered by SQLite's implicit rowid,
      * which is assigned in insertion order and never reused for these never-hard-deleted
      * rows) — the "last used" default for a new project's currency (LOCKED decision #2).

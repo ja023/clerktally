@@ -40,4 +40,16 @@ data class ReportStrings(
     val summaryLineVaryingRateTemplate: String,
     /** Raw `%1$d`/`%2$d` template for the PDF footer, e.g. "Page %1$d of %2$d". */
     val pageLabelTemplate: String,
+    // --- v1.1: Project statement + extended Company statement ------------------------------
+    val projectStatementTitle: String,
+    /** The LOCKED v1.1 literal column header: "CLERK / DAYS / EARNED / PAID / OWED". */
+    val projectStatementHeaderLabel: String,
+    /** The LOCKED v1.1 literal totals-line label: "PROJECT TOTAL". */
+    val projectTotalLabel: String,
+    /** The header wording when [com.vague.crewtally.report.ReportDateRange.isAllTime]. */
+    val allTimeLabel: String,
+    /** Suffix on a company statement's present-day activity line, e.g. "Ali Hassan - day". */
+    val dayActivityLabel: String,
+    /** Raw `%1$s` template for a payment activity line, e.g. "Payment -> %1$s". */
+    val paymentArrowTemplate: String,
 )

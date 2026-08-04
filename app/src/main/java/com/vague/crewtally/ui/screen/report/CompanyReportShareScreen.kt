@@ -42,6 +42,8 @@ import com.vague.crewtally.R
 import com.vague.crewtally.ui.components.CrewTallyAlertDialog
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyCurrencyTotalCard
+import com.vague.crewtally.ui.components.CrewTallyInlineError
+import com.vague.crewtally.ui.components.CrewTallyReportRangeSelector
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.util.owedDisplayText
 import com.vague.crewtally.ui.util.shareFile
@@ -105,7 +107,7 @@ fun CompanyReportShareScreen(
                 CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = loadingDescription })
             }
         } else {
-            val totals = state.totals ?: return@Scaffold
+            val totals = state.totals
 
             Column(
                 modifier = modifier
@@ -116,13 +118,24 @@ fun CompanyReportShareScreen(
                 verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.sectionGap),
             ) {
                 Text(
-                    text = totals.companyName,
+                    text = state.companyName,
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.semantics { heading() },
                 )
 
-                if (totals.projectSections.isEmpty()) {
+                CrewTallyReportRangeSelector(
+                    preset = state.rangePreset,
+                    onPresetChange = { viewModel.onEvent(CompanyReportShareEvent.RangePresetChanged(it)) },
+                    customStart = state.customStart,
+                    customEnd = state.customEnd,
+                    onCustomStartChange = { viewModel.onEvent(CompanyReportShareEvent.CustomStartChanged(it)) },
+                    onCustomEndChange = { viewModel.onEvent(CompanyReportShareEvent.CustomEndChanged(it)) },
+                )
+
+                if (state.isRangeInvalid) {
+                    CrewTallyInlineError(text = stringResource(R.string.report_range_invalid))
+                } else if (totals == null || totals.projectSections.isEmpty()) {
                     Text(
                         text = stringResource(R.string.report_company_no_projects),
                         style = MaterialTheme.typography.bodyLarge,
@@ -138,7 +151,7 @@ fun CompanyReportShareScreen(
                         )
                         totals.grandTotalsByCurrency.forEach { total ->
                             val symbol = CurrencyCodes.symbolFor(total.currency)
-                            val earnedText = Money.formatWithSymbol(total.earned, symbol)
+                            val earnedText = Money.formatSignedWithSymbol(total.earned, symbol)
                             val paidText = Money.formatWithSymbol(total.paid, symbol)
                             val owedText = owedDisplayText(total.owed, symbol)
                             CrewTallyCurrencyTotalCard(
@@ -164,13 +177,13 @@ fun CompanyReportShareScreen(
                 CrewTallyButton(
                     text = stringResource(R.string.report_share_as_text),
                     onClick = { viewModel.onEvent(CompanyReportShareEvent.ShareAsText) },
-                    enabled = !state.isGenerating,
+                    enabled = !state.isGenerating && !state.isRangeInvalid,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 CrewTallyButton(
                     text = stringResource(R.string.report_share_as_pdf),
                     onClick = { viewModel.onEvent(CompanyReportShareEvent.ShareAsPdf) },
-                    enabled = !state.isGenerating,
+                    enabled = !state.isGenerating && !state.isRangeInvalid,
                     modifier = Modifier.fillMaxWidth(),
                 )
 

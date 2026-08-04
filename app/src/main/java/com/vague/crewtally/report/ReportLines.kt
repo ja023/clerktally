@@ -70,7 +70,7 @@ object ReportLines {
         }
         lines += ""
 
-        lines += "${strings.earnedLabel}: ${Money.formatWithSymbol(statement.earned + statement.extras, symbol)}"
+        lines += "${strings.earnedLabel}: ${Money.formatSignedWithSymbol(statement.earned + statement.extras, symbol)}"
         lines += "${strings.paidLabel}: ${Money.formatWithSymbol(statement.paid, symbol)}"
         lines += "${strings.owedLabel}: ${owedPhrase(statement.owed, symbol, strings)}"
 
@@ -82,6 +82,7 @@ object ReportLines {
 
         lines += "${strings.appName} - ${strings.companyReportTitle}"
         lines += totals.companyName
+        lines += rangeText(totals.range, strings)
         lines += ""
 
         if (totals.projectSections.isEmpty()) {
@@ -95,11 +96,16 @@ object ReportLines {
                 } else {
                     section.clerkRows.forEach { row ->
                         lines += " ${row.clerkName}: ${strings.earnedLabel.lowercase(Locale.ROOT)} " +
-                            "${Money.formatWithSymbol(row.earned, symbol)}, ${strings.paidLabel.lowercase(Locale.ROOT)} " +
+                            "${Money.formatSignedWithSymbol(row.earned, symbol)}, ${strings.paidLabel.lowercase(Locale.ROOT)} " +
                             "${Money.formatWithSymbol(row.paid, symbol)}, ${owedPhrase(row.owed, symbol, strings)}"
                     }
                 }
-                lines += " ${strings.earnedLabel} ${Money.formatWithSymbol(section.projectEarned, symbol)}, " +
+                if (section.activityLines.isNotEmpty()) {
+                    lines += ""
+                    section.activityLines.forEach { line -> lines += " ${activityLineText(line, symbol, strings)}" }
+                }
+                lines += ""
+                lines += " ${strings.earnedLabel} ${Money.formatSignedWithSymbol(section.projectEarned, symbol)}, " +
                     "${strings.paidLabel} ${Money.formatWithSymbol(section.projectPaid, symbol)}, " +
                     owedPhrase(section.projectOwed, symbol, strings)
                 lines += ""
@@ -113,12 +119,72 @@ object ReportLines {
             totals.grandTotalsByCurrency.forEach { total ->
                 val symbol = symbolFor(total.currency)
                 lines += " ${total.currency}: ${strings.earnedLabel.lowercase(Locale.ROOT)} " +
-                    "${Money.formatWithSymbol(total.earned, symbol)}, ${strings.paidLabel.lowercase(Locale.ROOT)} " +
+                    "${Money.formatSignedWithSymbol(total.earned, symbol)}, ${strings.paidLabel.lowercase(Locale.ROOT)} " +
                     "${Money.formatWithSymbol(total.paid, symbol)}, ${owedPhrase(total.owed, symbol, strings)}"
             }
         }
 
         return lines
+    }
+
+    /**
+     * The project statement (NEW v1.1 report): a header, then a literal LOCKED column header
+     * ("CLERK / DAYS / EARNED / PAID / OWED") over one row per clerk, then a PROJECT TOTAL line.
+     */
+    fun forProjectStatement(statement: ProjectStatement, strings: ReportStrings): List<String> {
+        val symbol = symbolFor(statement.currency)
+        val lines = mutableListOf<String>()
+
+        lines += "${strings.appName} - ${strings.projectStatementTitle}"
+        lines += "${statement.projectName} - ${statement.companyName}"
+        lines += "${statement.currency} | ${rangeText(statement.range, strings)}"
+        lines += ""
+
+        lines += strings.projectStatementHeaderLabel
+        if (statement.clerkRows.isEmpty()) {
+            lines += " ${strings.noneRecordedLabel}"
+        } else {
+            statement.clerkRows.forEach { row ->
+                lines += " ${row.clerkName}  ${row.daysWorked}  ${Money.formatSignedWithSymbol(row.earned, symbol)}  " +
+                    "${Money.formatWithSymbol(row.paid, symbol)}  ${owedPhrase(row.owed, symbol, strings)}"
+            }
+        }
+        lines += ""
+
+        lines += strings.projectTotalLabel
+        lines += " ${strings.earnedLabel}: ${Money.formatSignedWithSymbol(statement.totalEarned, symbol)}"
+        lines += " ${strings.paidLabel}: ${Money.formatWithSymbol(statement.totalPaid, symbol)}"
+        lines += " ${strings.owedLabel}: ${owedPhrase(statement.totalOwed, symbol, strings)}"
+
+        return lines
+    }
+
+    /** Renders one [CompanyActivityLine], matching the LOCKED v1.1 examples ("Mar 3  Ali Hassan - day  $25", "Payment -> clerk  -$100"). */
+    private fun activityLineText(line: CompanyActivityLine, symbol: String, strings: ReportStrings): String {
+        val datePart = DATE_FORMAT.format(line.date)
+        return when (line) {
+            is CompanyDayActivityLine ->
+                "$datePart  ${line.clerkName} - ${strings.dayActivityLabel}  ${Money.formatWithSymbol(line.amount, symbol)}"
+            is CompanyExtraActivityLine ->
+                "$datePart  ${line.clerkName} - ${line.label}  ${Money.formatSignedWithSymbol(line.amount, symbol)}"
+            is CompanyPaymentActivityLine -> {
+                val notePart = line.note.ifBlank { null }
+                "$datePart  ${String.format(Locale.ROOT, strings.paymentArrowTemplate, line.clerkName)}  " +
+                    Money.formatSignedWithSymbol(line.amount, symbol) + (notePart?.let { "  $it" } ?: "")
+            }
+        }
+    }
+
+    /** The v1.1 header's range wording: [ReportStrings.allTimeLabel] or a formatted from-to span. */
+    private fun rangeText(range: ReportDateRange, strings: ReportStrings): String {
+        val start = range.start
+        val end = range.end
+        return when {
+            start == null && end == null -> strings.allTimeLabel
+            start != null && end != null -> "${DATE_FORMAT.format(start)} - ${DATE_FORMAT.format(end)}"
+            start != null -> DATE_FORMAT.format(start)
+            else -> DATE_FORMAT.format(requireNotNull(end))
+        }
     }
 
     /**

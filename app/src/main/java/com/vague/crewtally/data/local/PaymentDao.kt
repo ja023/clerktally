@@ -62,6 +62,14 @@ interface PaymentDao {
     @Query("SELECT COUNT(*) FROM payments WHERE clerkId = :clerkId")
     suspend fun countByClerk(clerkId: String): Int
 
+    /**
+     * Every payment row across the whole book, reactively — the v1.1 project statement and
+     * extended company statement's raw payments feed, filtered down to one project (or one
+     * company's projects) in Kotlin, mirroring [AttendanceEntryDao.observeAll].
+     */
+    @Query("SELECT * FROM payments")
+    fun observeAll(): Flow<List<PaymentEntity>>
+
     /** Every payment row, verbatim — the backup export's payments table. */
     @Query("SELECT * FROM payments")
     suspend fun getAll(): List<PaymentEntity>

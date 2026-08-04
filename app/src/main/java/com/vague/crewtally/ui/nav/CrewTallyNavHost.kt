@@ -46,7 +46,11 @@ import com.vague.crewtally.ui.screen.money.MoneyRoutes
 import com.vague.crewtally.ui.screen.money.PaymentFormScreen
 import com.vague.crewtally.ui.screen.report.ClerkStatementShareScreen
 import com.vague.crewtally.ui.screen.report.CompanyReportShareScreen
+import com.vague.crewtally.ui.screen.report.CompanyStatementPickerScreen
+import com.vague.crewtally.ui.screen.report.ProjectStatementPickerScreen
+import com.vague.crewtally.ui.screen.report.ProjectStatementShareScreen
 import com.vague.crewtally.ui.screen.report.ReportRoutes
+import com.vague.crewtally.ui.screen.report.ReportsHubScreen
 import com.vague.crewtally.ui.screen.settings.PrivacyScreen
 import com.vague.crewtally.ui.screen.settings.SettingsScreen
 import com.vague.crewtally.ui.theme.CrewTallyTheme
@@ -163,6 +167,7 @@ fun CrewTallyNavHost() {
             composable(CrewTallyDestination.More.route) {
                 MoreScreen(
                     onCompaniesClick = { navController.navigate(CrewTallyRoutes.COMPANIES) },
+                    onReportsClick = { navController.navigate(ReportRoutes.REPORTS_HUB) },
                     onBackupClick = { navController.navigate(CrewTallyRoutes.BACKUP) },
                     onSettingsClick = { navController.navigate(CrewTallyRoutes.SETTINGS) },
                 )
@@ -388,6 +393,36 @@ fun CrewTallyNavHost() {
             ) { backStackEntry ->
                 CompanyReportShareScreen(
                     companyId = backStackEntry.arguments?.getString(ReportRoutes.COMPANY_ID).orEmpty(),
+                    navController = navController,
+                )
+            }
+
+            // --- v1.1: Reports hub + project statement -------------------------------
+            composable(ReportRoutes.REPORTS_HUB) {
+                ReportsHubScreen(
+                    onProjectStatementClick = { navController.navigate(ReportRoutes.PROJECT_STATEMENT_PICKER) },
+                    onCompanyStatementClick = { navController.navigate(ReportRoutes.COMPANY_STATEMENT_PICKER) },
+                    navController = navController,
+                )
+            }
+            composable(ReportRoutes.PROJECT_STATEMENT_PICKER) {
+                ProjectStatementPickerScreen(
+                    onProjectSelected = { projectId -> navController.navigate(ReportRoutes.projectStatement(projectId)) },
+                    navController = navController,
+                )
+            }
+            composable(ReportRoutes.COMPANY_STATEMENT_PICKER) {
+                CompanyStatementPickerScreen(
+                    onCompanySelected = { companyId -> navController.navigate(ReportRoutes.companyReport(companyId)) },
+                    navController = navController,
+                )
+            }
+            composable(
+                route = ReportRoutes.PROJECT_STATEMENT_TEMPLATE,
+                arguments = listOf(navArgument(ReportRoutes.PROJECT_ID) { type = NavType.StringType }),
+            ) { backStackEntry ->
+                ProjectStatementShareScreen(
+                    projectId = backStackEntry.arguments?.getString(ReportRoutes.PROJECT_ID).orEmpty(),
                     navController = navController,
                 )
             }

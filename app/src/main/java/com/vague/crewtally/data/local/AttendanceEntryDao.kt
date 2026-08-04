@@ -109,6 +109,16 @@ interface AttendanceEntryDao {
     @Query("SELECT COUNT(*) FROM attendance_entries WHERE clerkId = :clerkId")
     suspend fun countByClerk(clerkId: String): Int
 
+    /**
+     * Every attendance row across the whole book, reactively — feeds the v1.1 project statement
+     * and extended company statement (both need raw per-clerk-per-day rows, not just the earned
+     * roll-up), filtered down to one project (or one company's projects) in Kotlin the same way
+     * [observeEarningsRollup] already is. [getAll] above is the suspend snapshot the backup
+     * export uses; this is its reactive Flow counterpart for report screens.
+     */
+    @Query("SELECT * FROM attendance_entries")
+    fun observeAll(): Flow<List<AttendanceEntryEntity>>
+
     /** Every attendance row, verbatim — the backup export's attendance_entries table. */
     @Query("SELECT * FROM attendance_entries")
     suspend fun getAll(): List<AttendanceEntryEntity>

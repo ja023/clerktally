@@ -34,6 +34,8 @@ class FakePaymentDao : PaymentDao {
 
     override suspend fun getById(id: String): PaymentEntity? = payments.value.find { it.id == id }
 
+    override fun observeAll(): Flow<List<PaymentEntity>> = payments
+
     override fun observePaymentsRollup(): Flow<List<ClerkProjectAmount>> =
         payments.map { list -> rollup(list) }
 

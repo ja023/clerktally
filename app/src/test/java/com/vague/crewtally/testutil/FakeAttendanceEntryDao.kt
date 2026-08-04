@@ -79,6 +79,8 @@ class FakeAttendanceEntryDao : AttendanceEntryDao {
 
     override suspend fun getById(id: String): AttendanceEntryEntity? = entries.value.find { it.id == id }
 
+    override fun observeAll(): Flow<List<AttendanceEntryEntity>> = entries
+
     override fun observeForClerkOnProject(projectId: String, clerkId: String): Flow<List<AttendanceEntryEntity>> =
         entries.map { list ->
             list.filter { it.projectId == projectId && it.clerkId == clerkId }.sortedBy { it.date }

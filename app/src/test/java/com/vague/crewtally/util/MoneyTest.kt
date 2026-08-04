@@ -75,6 +75,29 @@ class MoneyTest {
     }
 
     @Test
+    fun `formatWithSymbol garbles a negative amount, the reason formatSignedWithSymbol exists`() {
+        // Documents the plain %d,%02d defect formatSignedWithSymbol was built to avoid — the
+        // sign lands on the major-unit split, not on the whole amount.
+        assertEquals("\$-25.-50", Money.formatWithSymbol(-2550L, "$"))
+    }
+
+    @Test
+    fun `formatSignedWithSymbol renders a negative amount with one leading minus sign`() {
+        assertEquals("-\$25.50", Money.formatSignedWithSymbol(-2550L, "$"))
+    }
+
+    @Test
+    fun `formatSignedWithSymbol renders a positive amount with no leading sign, matching formatWithSymbol`() {
+        assertEquals("\$25.50", Money.formatSignedWithSymbol(2550L, "$"))
+        assertEquals(Money.formatWithSymbol(2550L, "$"), Money.formatSignedWithSymbol(2550L, "$"))
+    }
+
+    @Test
+    fun `formatSignedWithSymbol renders zero with no leading sign`() {
+        assertEquals("\$0.00", Money.formatSignedWithSymbol(0L, "$"))
+    }
+
+    @Test
     fun `formatted rate under a forced Arabic locale still parses back`() {
         Locale.setDefault(Locale.forLanguageTag("ar-EG"))
 

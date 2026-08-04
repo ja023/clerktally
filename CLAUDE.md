@@ -7,7 +7,7 @@ assumptions anywhere in code, copy, or assets**. Will be published publicly on
 Google Play.
 
 - App name: **CrewTally** · package id: **com.vague.crewtally** (LOCKED — unchangeable after first Play upload)
-- Repo: `/home/jad/crewtally` (LOCAL ONLY — do not push unless Jad asks)
+- Repo: `/home/jad/crewtally` — remote `git@github.com:ja023/clerktally.git` (Jad asked 2026-08-04 to push once v1.1 lands; repo name on GitHub is "clerktally", intentional as given)
 - Stack: Kotlin + Jetpack Compose + Room + Material 3. Offline-only, single device, no accounts, no network permission.
 - Build: agent builds APK on this Fedora box (`~/android-dev`, SDK at `~/Android/Sdk`), Jad tap-installs on phone.
 - Store-readiness from day one: target latest SDK, adaptive icon, data-safety = "no data collected", privacy policy (offline), versioned signing.
@@ -124,6 +124,17 @@ Fable orchestrates; sub-decisions inside each phase still go to Jad as MCQs befo
 - Release signing config + keystore generated locally (NEVER committed; stored outside repo, path + instructions in a local note for Jad).
 - Play-readiness artifacts drafted for Jad's approval (nothing uploaded by the agent): store listing copy, data-safety answers (offline, READ_CONTACTS optional-use disclosure), privacy policy text.
 - Version 1.0.0, versionCode 1. Room schema FROZEN at v1 the moment the final APK installs on Jad's phone — every later change is a migration.
+- ⚠️ **FREEZE IN EFFECT: Jad installed the signed release v1.0.0 on his phone (confirmed 2026-08-04). Schema v1 is FROZEN — any future schema change requires a Room migration.** Updates must be release-signed (same keystore) so they install over the existing app with data kept.
+
+## v1.1 LOCKED decisions (2026-08-04 scoping with Jad) — Statements of account, on demand
+
+- **Ships as v1.1.0, versionCode 2** (v1.0.0 stays untouched; v1.1 installs over it, data kept). No schema change — everything derived. Amends locked #8's "no standalone project report" for v1.1.
+- **NEW report: Project statement** — per-clerk summary table: one row per clerk with days worked, earned (base + extras folded in, same convention as CompanyProjectClerkRow), paid, owed; project totals row. Header: project name, company, currency, covered date range. Approved format:
+  `CLERK / DAYS / EARNED / PAID / OWED` rows + `PROJECT TOTAL` line.
+- **EXTENDED report: Company statement** (replaces "Company totals" naming in UI; builder/models may evolve) — each project section now shows BOTH: (a) the existing per-clerk earned/paid/owed summary table, then (b) dated activity lines at **per-clerk-per-day granularity**: one line per clerk per present day (`Mar 3  Ali Hassan - day  $25`), one line per extra (label + clerk), one line per payment (`Payment -> clerk  -$100`, negative). Project subtotal after the lines; grand totals per currency at the end (cross-currency never summed — LOCKED).
+- **Reports hub**: new "Reports" entry on the More tab: `Project statement → pick project → range → share` and `Company statement → pick company → range → share`. Clerk statement stays where it is (clerk balance screen); NOT duplicated in the hub. Pickers are simple big-row lists (senior-friendly).
+- **Date range**: default All time; preset buttons All time / This month / Last month / Custom (two date pickers). Range filters attendance days, extras, AND payments by date; all totals in the statement reflect the selected range only, and the header states the range explicitly.
+- Both statements offered as TEXT + PDF via the system share sheet, same renderer pipeline and tone as Phase 5 reports. No em dashes in generated report text (Jad's standing copy rule) — use plain hyphens/arrows like existing renderers.
 
 ## Autonomous run contract (Jad, 2026-08-01)
 
@@ -154,6 +165,10 @@ Remaining (post-release polish unless noted):
   done during v1 build; deliberately skipped at the Phase 6 ship gate (pure refactor, no user
   impact). Do it before any third form copies the pattern.
 - **Nav route builders** instead of literal `"clerks/$id/edit"` templates (whenever nav is next touched).
+- **(v1.1 gate, 2026-08-04) Report share ViewModels filter the whole book on Main**: `ProjectStatementShareViewModel`/`CompanyReportShareViewModel` combine unfiltered observeAll flows and filter in-memory on Main.immediate (matches app-wide convention). Revisit with `.flowOn(Dispatchers.Default)` only if real-device jank appears as data grows.
+- **(v1.1 gate) NavController passed to leaf report screens** for back-only use; if ever cleaned up, switch to `onBack: () -> Unit` codebase-wide, not just the report screens.
+- **(v1.1 gate) Route `report/project/pick` vs template `report/project/{projectId}`** sit at the same depth; androidx route scoring prefers the literal so it resolves correctly — confirm once on device; if ever renamed use `report/pick-project`.
+- **(v1.1 gate) TalkBack device checks pending**: (a) focus behavior when the Custom date row unmounts in `CrewTallyReportRangeSelector`; (b) initial a11y focus on the five new/changed report screens (v1.0 parity, app-wide pattern); (c) Material3 double From/To date-picker adjacency announcements.
 - **Permission re-check on resume** in ContactSearchField (granted via system Settings while form open) — only if it shows up in real use.
 - ⚠️ **Type.kt `labelMedium`/`labelSmall` are 14sp** — never reach for them for anything a user must read (locked ≥16sp rule). (Phase 6 removed the one violation: bottom-nav labels.)
 

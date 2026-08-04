@@ -4,6 +4,7 @@ import com.vague.crewtally.data.local.AttendanceExtraTotal
 import com.vague.crewtally.data.local.ClerkProjectAmount
 import com.vague.crewtally.data.local.ExtraPayLineDao
 import com.vague.crewtally.data.local.ExtraPayLineEntity
+import com.vague.crewtally.data.local.ExtraPayLineWithClerk
 import com.vague.crewtally.data.local.ExtraPayLineWithDate
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
@@ -53,6 +54,16 @@ class FakeExtraPayLineDao(private val attendance: FakeAttendanceEntryDao) : Extr
             list.mapNotNull { line ->
                 matchingEntries[line.attendanceEntryId]?.let { ExtraPayLineWithDate(line, it.date) }
             }.sortedBy { it.date }
+        }
+
+    override fun observeAllWithClerk(): Flow<List<ExtraPayLineWithClerk>> =
+        combine(lines, attendance.entries) { list, entries ->
+            val entryById = entries.associateBy { it.id }
+            list.mapNotNull { line ->
+                entryById[line.attendanceEntryId]?.let { entry ->
+                    ExtraPayLineWithClerk(line, entry.date, entry.projectId, entry.clerkId)
+                }
+            }
         }
 
     override fun observeExtrasRollup(): Flow<List<ClerkProjectAmount>> =

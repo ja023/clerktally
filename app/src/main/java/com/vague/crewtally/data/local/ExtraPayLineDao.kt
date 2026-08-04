@@ -81,6 +81,21 @@ interface ExtraPayLineDao {
     )
     fun observeExtrasRollupForClerk(clerkId: String): Flow<List<ClerkProjectAmount>>
 
+    /**
+     * Every extra-pay line across the whole book, reactively, each carrying its carrier
+     * attendance entry's date/project/clerk — the v1.1 project statement and extended company
+     * statement's raw extras feed (see [ExtraPayLineWithClerk]'s KDoc for why a new projection
+     * was needed rather than reusing [observeForClerkOnProject]).
+     */
+    @Query(
+        """
+        SELECT x.*, a.date AS date, a.projectId AS projectId, a.clerkId AS clerkId
+        FROM extra_pay_lines x
+        JOIN attendance_entries a ON a.id = x.attendanceEntryId
+        """,
+    )
+    fun observeAllWithClerk(): Flow<List<ExtraPayLineWithClerk>>
+
     /** Every extra-pay line, verbatim — the backup export's extra_pay_lines table. */
     @Query("SELECT * FROM extra_pay_lines")
     suspend fun getAll(): List<ExtraPayLineEntity>

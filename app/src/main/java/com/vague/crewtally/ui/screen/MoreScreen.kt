@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Close
@@ -50,6 +51,7 @@ import com.vague.crewtally.ui.theme.CrewTallyTheme
 @Composable
 fun MoreScreen(
     onCompaniesClick: () -> Unit,
+    onReportsClick: () -> Unit,
     onBackupClick: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -105,6 +107,11 @@ fun MoreScreen(
             leadingIcon = Icons.Filled.Business,
             onClick = onCompaniesClick,
             contentDescription = companies,
+        )
+        CrewTallyListRow(
+            title = stringResource(R.string.more_reports),
+            leadingIcon = Icons.Filled.Assessment,
+            onClick = onReportsClick,
         )
         CrewTallyListRow(
             title = stringResource(R.string.more_backup),

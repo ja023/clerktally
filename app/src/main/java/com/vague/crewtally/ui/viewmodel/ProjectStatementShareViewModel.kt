@@ -9,7 +9,6 @@ import com.vague.crewtally.data.local.AttendanceEntryDao
 import com.vague.crewtally.data.local.AttendanceEntryEntity
 import com.vague.crewtally.data.local.ClerkDao
 import com.vague.crewtally.data.local.CompanyDao
-import com.vague.crewtally.data.local.CompanyEntity
 import com.vague.crewtally.data.local.ExtraPayLineDao
 import com.vague.crewtally.data.local.ExtraPayLineWithClerk
 import com.vague.crewtally.data.local.ExtraPayLineWithDate
@@ -17,9 +16,8 @@ import com.vague.crewtally.data.local.PaymentDao
 import com.vague.crewtally.data.local.PaymentEntity
 import com.vague.crewtally.data.local.ProjectDao
 import com.vague.crewtally.data.local.ProjectEntity
-import com.vague.crewtally.report.CompanyReportProjectInput
-import com.vague.crewtally.report.CompanyTotals
-import com.vague.crewtally.report.CompanyTotalsBuilder
+import com.vague.crewtally.report.ProjectStatement
+import com.vague.crewtally.report.ProjectStatementBuilder
 import com.vague.crewtally.report.ReportClerkLedgerInput
 import com.vague.crewtally.report.ReportDateRange
 import com.vague.crewtally.report.ReportDateRanges
@@ -33,6 +31,7 @@ import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,17 +39,22 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class CompanyReportShareUiState(
-    val totals: CompanyTotals? = null,
-    /** The company's name, available as soon as the company itself loads — independent of
-     *  [totals], which is null both while loading AND while [isRangeInvalid] (no totals to
+data class ProjectStatementShareUiState(
+    val statement: ProjectStatement? = null,
+    /** The project's identity, available as soon as the project itself loads — independent of
+     *  [statement], which is null both while loading AND while [isRangeInvalid] (no statement to
      *  build), so the screen can still show a header while showing the invalid-range error. */
+    val projectName: String = "",
     val companyName: String = "",
+    val currency: String = "",
     val isLoaded: Boolean = false,
     val isGenerating: Boolean = false,
     val generationFailure: Boolean = false,
@@ -61,28 +65,28 @@ data class CompanyReportShareUiState(
     val isRangeInvalid: Boolean = false,
 )
 
-sealed interface CompanyReportShareEvent {
-    data class RangePresetChanged(val preset: ReportRangePreset) : CompanyReportShareEvent
-    data class CustomStartChanged(val date: LocalDate) : CompanyReportShareEvent
-    data class CustomEndChanged(val date: LocalDate) : CompanyReportShareEvent
-    data object ShareAsText : CompanyReportShareEvent
-    data object ShareAsPdf : CompanyReportShareEvent
-    data object DismissGenerationFailure : CompanyReportShareEvent
+sealed interface ProjectStatementShareEvent {
+    data class RangePresetChanged(val preset: ReportRangePreset) : ProjectStatementShareEvent
+    data class CustomStartChanged(val date: LocalDate) : ProjectStatementShareEvent
+    data class CustomEndChanged(val date: LocalDate) : ProjectStatementShareEvent
+    data object ShareAsText : ProjectStatementShareEvent
+    data object ShareAsPdf : ProjectStatementShareEvent
+    data object DismissGenerationFailure : ProjectStatementShareEvent
 }
 
 /**
- * Backs the company statement share screen (LOCKED Phase 5, EXTENDED v1.1 with per-clerk-per-day
- * activity lines and a date-range filter). Draws from the whole-book raw attendance/extras/
- * payments flows — filtered down to this company's projects — rather than the pre-summed
- * roll-ups the Phase 5 version used, because [CompanyTotalsBuilder] now needs day-level detail
- * to emit activity lines, not just per-(project,clerk) totals. Generation is off-thread with the
- * same re-entrancy guard as [ClerkStatementShareViewModel]; changing the range recomputes
- * [totalsState] reactively so the preview always matches what would be shared.
+ * Backs the NEW v1.1 project statement share screen: a per-clerk summary table (days/earned/
+ * paid/owed) plus a PROJECT TOTAL row, for every clerk who ever had activity on the project,
+ * scoped to the selected [ReportDateRange] (LOCKED default All time). Draws from the same
+ * whole-book raw flows [CompanyReportShareViewModel] uses (attendance/extras/payments), filtered
+ * down to this one project — changing the range recomputes [statementState] reactively so the
+ * preview always matches what would be shared.
  */
-class CompanyReportShareViewModel(
-    private val companyId: String,
-    companyDao: CompanyDao,
+@OptIn(ExperimentalCoroutinesApi::class)
+class ProjectStatementShareViewModel(
+    private val projectId: String,
     projectDao: ProjectDao,
+    companyDao: CompanyDao,
     clerkDao: ClerkDao,
     attendanceEntryDao: AttendanceEntryDao,
     extraPayLineDao: ExtraPayLineDao,
@@ -94,15 +98,11 @@ class CompanyReportShareViewModel(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
 
-    private data class Identity(
-        val company: CompanyEntity?,
-        val projects: List<ProjectEntity>,
-        val clerkNameById: Map<String, String>,
-    )
+    private data class Identity(val project: ProjectEntity?, val companyName: String, val clerkNameById: Map<String, String>)
 
     private data class RawData(
-        val company: CompanyEntity?,
-        val projects: List<ProjectEntity>,
+        val project: ProjectEntity?,
+        val companyName: String,
         val clerkNameById: Map<String, String>,
         val attendance: List<AttendanceEntryEntity>,
         val extras: List<ExtraPayLineWithClerk>,
@@ -110,17 +110,23 @@ class CompanyReportShareViewModel(
     )
 
     private data class RangeSelection(val preset: ReportRangePreset, val customStart: LocalDate?, val customEnd: LocalDate?) {
-        /** A CUSTOM range with both dates set but From after To — nothing to build, no totals. */
+        /** A CUSTOM range with both dates set but From after To — nothing to build, no statement. */
         val isInvalid: Boolean
             get() = preset == ReportRangePreset.CUSTOM &&
                 customStart != null && customEnd != null && customStart.isAfter(customEnd)
     }
 
+    private val companyName: Flow<String> = projectDao.observeById(projectId)
+        .map { it?.companyId }
+        .distinctUntilChanged()
+        .flatMapLatest { companyId -> companyId?.let(companyDao::observeById) ?: flowOf(null) }
+        .map { it?.name.orEmpty() }
+
     private val identity: Flow<Identity> = combine(
-        companyDao.observeById(companyId),
-        projectDao.observeByCompany(companyId),
+        projectDao.observeById(projectId),
+        companyName,
         clerkDao.observeAll(),
-    ) { company, projects, clerks -> Identity(company, projects, clerks.associate { it.id to it.name }) }
+    ) { project, company, clerks -> Identity(project, company, clerks.associate { it.id to it.name }) }
 
     private val raw: Flow<RawData> = combine(
         identity,
@@ -128,14 +134,13 @@ class CompanyReportShareViewModel(
         extraPayLineDao.observeAllWithClerk(),
         paymentDao.observeAll(),
     ) { id, attendance, extras, payments ->
-        val projectIds = id.projects.map { it.id }.toSet()
         RawData(
-            company = id.company,
-            projects = id.projects,
+            project = id.project,
+            companyName = id.companyName,
             clerkNameById = id.clerkNameById,
-            attendance = attendance.filter { it.projectId in projectIds },
-            extras = extras.filter { it.projectId in projectIds },
-            payments = payments.filter { it.projectId in projectIds },
+            attendance = attendance.filter { it.projectId == projectId },
+            extras = extras.filter { it.projectId == projectId },
+            payments = payments.filter { it.projectId == projectId },
         )
     }
 
@@ -147,52 +152,47 @@ class CompanyReportShareViewModel(
         combine(_rangePreset, _customStart, _customEnd) { preset, start, end -> RangeSelection(preset, start, end) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), RangeSelection(ReportRangePreset.ALL_TIME, null, null))
 
-    private val companyName: StateFlow<String?> =
-        raw.map { it.company?.name }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
+    private data class ProjectHeader(val projectName: String, val companyName: String, val currency: String)
 
-    private val totalsState: StateFlow<CompanyTotals?> = combine(raw, rangeSelection) { data, selection ->
-        val company = data.company ?: return@combine null
-        // Invalid range (From after To): nothing to build — the screen shows [CompanyReportShareUiState.isRangeInvalid]
-        // instead of totals, rather than silently rendering the generic empty-projects state.
+    private val header: StateFlow<ProjectHeader?> = raw
+        .map { data -> data.project?.let { ProjectHeader(it.name, data.companyName, it.currency) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
+
+    private val statementState: StateFlow<ProjectStatement?> = combine(raw, rangeSelection) { data, selection ->
+        val project = data.project ?: return@combine null
+        // Invalid range (From after To): nothing to build — the screen shows [ProjectStatementShareUiState.isRangeInvalid]
+        // instead of a statement, rather than silently rendering the generic empty-activity state.
         if (selection.isInvalid) return@combine null
-        val range = ReportDateRanges.resolve(selection.preset, today, selection.customStart, selection.customEnd)
-        val projectInputs = data.projects.map { project ->
-            val projectAttendance = data.attendance.filter { it.projectId == project.id }
-            val projectExtras = data.extras.filter { it.projectId == project.id }
-            val projectPayments = data.payments.filter { it.projectId == project.id }
-            val clerkIds = (
-                projectAttendance.map { it.clerkId } +
-                    projectExtras.map { it.clerkId } +
-                    projectPayments.map { it.clerkId }
-                ).toSet()
-            val clerkInputs = clerkIds.map { clerkId ->
-                ReportClerkLedgerInput(
-                    clerkId = clerkId,
-                    clerkName = data.clerkNameById[clerkId].orEmpty(),
-                    attendance = projectAttendance.filter { it.clerkId == clerkId },
-                    extras = projectExtras.filter { it.clerkId == clerkId }.map { ExtraPayLineWithDate(it.line, it.date) },
-                    payments = projectPayments.filter { it.clerkId == clerkId },
-                )
-            }
-            CompanyReportProjectInput(
-                projectId = project.id,
-                projectName = project.name,
-                currency = project.currency,
-                clerks = clerkInputs,
+        val clerkIds = (data.attendance.map { it.clerkId } + data.extras.map { it.clerkId } + data.payments.map { it.clerkId }).toSet()
+        val clerkInputs = clerkIds.map { clerkId ->
+            ReportClerkLedgerInput(
+                clerkId = clerkId,
+                clerkName = data.clerkNameById[clerkId].orEmpty(),
+                attendance = data.attendance.filter { it.clerkId == clerkId },
+                extras = data.extras.filter { it.clerkId == clerkId }.map { ExtraPayLineWithDate(it.line, it.date) },
+                payments = data.payments.filter { it.clerkId == clerkId },
             )
         }
-        CompanyTotalsBuilder.build(company.name, projectInputs, range)
+        ProjectStatementBuilder.build(
+            projectName = project.name,
+            companyName = data.companyName,
+            currency = project.currency,
+            clerks = clerkInputs,
+            range = ReportDateRanges.resolve(selection.preset, today, selection.customStart, selection.customEnd),
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
     private val _isGenerating = MutableStateFlow(false)
     private val _generationFailure = MutableStateFlow(false)
 
-    val uiState: StateFlow<CompanyReportShareUiState> =
-        combine(totalsState, companyName, _isGenerating, _generationFailure, rangeSelection) { totals, name, generating, failure, selection ->
-            CompanyReportShareUiState(
-                totals = totals,
-                companyName = name.orEmpty(),
-                isLoaded = name != null,
+    val uiState: StateFlow<ProjectStatementShareUiState> =
+        combine(statementState, header, _isGenerating, _generationFailure, rangeSelection) { statement, projectHeader, generating, failure, selection ->
+            ProjectStatementShareUiState(
+                statement = statement,
+                projectName = projectHeader?.projectName.orEmpty(),
+                companyName = projectHeader?.companyName.orEmpty(),
+                currency = projectHeader?.currency.orEmpty(),
+                isLoaded = projectHeader != null,
                 isGenerating = generating,
                 generationFailure = failure,
                 rangePreset = selection.preset,
@@ -200,19 +200,19 @@ class CompanyReportShareViewModel(
                 customEnd = selection.customEnd,
                 isRangeInvalid = selection.isInvalid,
             )
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), CompanyReportShareUiState())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), ProjectStatementShareUiState())
 
     private val _shareRequests = MutableSharedFlow<ShareFileRequest>(extraBufferCapacity = 1)
     val shareRequests: SharedFlow<ShareFileRequest> = _shareRequests
 
-    fun onEvent(event: CompanyReportShareEvent) {
+    fun onEvent(event: ProjectStatementShareEvent) {
         when (event) {
-            is CompanyReportShareEvent.RangePresetChanged -> onRangePresetChanged(event.preset)
-            is CompanyReportShareEvent.CustomStartChanged -> _customStart.value = event.date
-            is CompanyReportShareEvent.CustomEndChanged -> _customEnd.value = event.date
-            CompanyReportShareEvent.DismissGenerationFailure -> _generationFailure.value = false
-            CompanyReportShareEvent.ShareAsText -> shareAsText()
-            CompanyReportShareEvent.ShareAsPdf -> shareAsPdf()
+            is ProjectStatementShareEvent.RangePresetChanged -> onRangePresetChanged(event.preset)
+            is ProjectStatementShareEvent.CustomStartChanged -> _customStart.value = event.date
+            is ProjectStatementShareEvent.CustomEndChanged -> _customEnd.value = event.date
+            ProjectStatementShareEvent.DismissGenerationFailure -> _generationFailure.value = false
+            ProjectStatementShareEvent.ShareAsText -> shareAsText()
+            ProjectStatementShareEvent.ShareAsPdf -> shareAsPdf()
         }
     }
 
@@ -232,21 +232,21 @@ class CompanyReportShareViewModel(
     }
 
     private fun shareAsText() {
-        val totals = totalsState.value ?: return
+        val statement = statementState.value ?: return
         if (_isGenerating.value) return // re-entrancy guard: ignore a second tap while generating.
         generate {
-            val content = TextReportRenderer.renderCompanyTotals(totals, strings)
-            val fileName = ReportFileNames.companyReportFileName(totals.companyName, "txt")
+            val content = TextReportRenderer.renderProjectStatement(statement, strings)
+            val fileName = ReportFileNames.projectStatementFileName(statement.projectName, "txt")
             ShareFileRequest(fileWriter.writeText(fileName, content), "text/plain")
         }
     }
 
     private fun shareAsPdf() {
-        val totals = totalsState.value ?: return
+        val statement = statementState.value ?: return
         if (_isGenerating.value) return // re-entrancy guard: ignore a second tap while generating.
         generate {
-            val lines = ReportLines.forCompanyTotals(totals, strings)
-            val fileName = ReportFileNames.companyReportFileName(totals.companyName, "pdf")
+            val lines = ReportLines.forProjectStatement(statement, strings)
+            val fileName = ReportFileNames.projectStatementFileName(statement.projectName, "pdf")
             ShareFileRequest(fileWriter.writePdf(fileName, lines, strings.pageLabelTemplate), "application/pdf")
         }
     }
@@ -270,9 +270,9 @@ class CompanyReportShareViewModel(
 
     companion object {
         fun factory(
-            companyId: String,
-            companyDao: CompanyDao,
+            projectId: String,
             projectDao: ProjectDao,
+            companyDao: CompanyDao,
             clerkDao: ClerkDao,
             attendanceEntryDao: AttendanceEntryDao,
             extraPayLineDao: ExtraPayLineDao,
@@ -281,10 +281,10 @@ class CompanyReportShareViewModel(
             strings: ReportStrings,
         ): ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                CompanyReportShareViewModel(
-                    companyId,
-                    companyDao,
+                ProjectStatementShareViewModel(
+                    projectId,
                     projectDao,
+                    companyDao,
                     clerkDao,
                     attendanceEntryDao,
                     extraPayLineDao,

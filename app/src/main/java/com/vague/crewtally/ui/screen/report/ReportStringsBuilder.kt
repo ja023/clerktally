@@ -33,4 +33,10 @@ fun buildReportStrings(): ReportStrings = ReportStrings(
     summaryLineTemplate = stringResource(R.string.report_summary_line_template),
     summaryLineVaryingRateTemplate = stringResource(R.string.report_summary_line_varying_rate_template),
     pageLabelTemplate = stringResource(R.string.report_page_label_template),
+    projectStatementTitle = stringResource(R.string.report_project_statement_title),
+    projectStatementHeaderLabel = stringResource(R.string.report_project_statement_header),
+    projectTotalLabel = stringResource(R.string.report_project_total_label),
+    allTimeLabel = stringResource(R.string.report_range_all_time),
+    dayActivityLabel = stringResource(R.string.report_day_activity_label),
+    paymentArrowTemplate = stringResource(R.string.report_payment_arrow_template),
 )

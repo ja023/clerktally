@@ -44,14 +44,17 @@ class FakeProjectDao : ProjectDao {
 
     override fun observeSummariesByStatus(status: ProjectStatus): Flow<List<ProjectSummary>> =
         entriesFlow.map { list ->
-            list.filter { it.status == status }.map { project ->
-                ProjectSummary(
-                    project = project,
-                    companyName = companyNames[project.companyId].orEmpty(),
-                    rosterSize = rosterSizes[project.id] ?: 0,
-                )
-            }
+            list.filter { it.status == status }.map { project -> toSummary(project) }
         }
+
+    override fun observeAllSummaries(): Flow<List<ProjectSummary>> =
+        entriesFlow.map { list -> list.map { project -> toSummary(project) } }
+
+    private fun toSummary(project: ProjectEntity): ProjectSummary = ProjectSummary(
+        project = project,
+        companyName = companyNames[project.companyId].orEmpty(),
+        rosterSize = rosterSizes[project.id] ?: 0,
+    )
 
     override suspend fun getMostRecentCurrency(): String? = entries.lastOrNull()?.currency
 

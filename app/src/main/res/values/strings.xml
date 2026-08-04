@@ -281,14 +281,14 @@
     <string name="report_share_statement">Share statement</string>
     <string name="report_share_company">Share company report</string>
     <string name="report_clerk_share_title">Statement</string>
-    <string name="report_company_share_title">Company report</string>
+    <string name="report_company_share_title">Company statement</string>
     <string name="report_share_as_text">Share as text</string>
     <string name="report_share_as_pdf">Share as PDF</string>
     <string name="report_preparing">Preparing report</string>
     <string name="report_clerk_no_activity">No activity yet on this project.</string>
     <string name="report_company_no_projects">No projects yet for this company.</string>
     <string name="report_clerk_statement_title">Clerk Statement</string>
-    <string name="report_company_report_title">Company Report</string>
+    <string name="report_company_report_title">Company Statement</string>
     <string name="report_days_worked_label">Days worked</string>
     <string name="report_extras_label">Extras</string>
     <string name="report_payments_label">Payments</string>
@@ -307,6 +307,35 @@
     <string name="report_currency_total_description">%1$s. Earned %2$s. Paid %3$s. %4$s.</string>
     <string name="report_generation_error_title">Couldn\'t create the file</string>
     <string name="report_generation_error_body">Couldn\'t create the report file. Try again.</string>
+
+    <!-- Reports hub + Project statement (v1.1) -->
+    <string name="more_reports">Reports</string>
+    <string name="reports_hub_title">Reports</string>
+    <string name="reports_project_statement">Project statement</string>
+    <string name="reports_company_statement">Company statement</string>
+    <string name="reports_project_picker_empty">No projects yet.</string>
+    <string name="reports_company_picker_empty">No companies yet.</string>
+    <string name="report_project_share_title">Project statement</string>
+    <string name="report_project_no_activity">No activity yet on this project.</string>
+    <string name="report_project_clerk_count_label">Clerks</string>
+    <plurals name="report_clerk_count">
+        <item quantity="one">%d clerk</item>
+        <item quantity="other">%d clerks</item>
+    </plurals>
+    <string name="report_project_statement_title">Project Statement</string>
+    <string name="report_project_statement_header">CLERK / DAYS / EARNED / PAID / OWED</string>
+    <string name="report_project_total_label">PROJECT TOTAL</string>
+    <string name="report_day_activity_label">day</string>
+    <string name="report_payment_arrow_template">Payment -&gt; %1$s</string>
+
+    <!-- Report date range (v1.1) -->
+    <string name="report_range_all_time">All time</string>
+    <string name="report_range_this_month">This month</string>
+    <string name="report_range_last_month">Last month</string>
+    <string name="report_range_custom">Custom</string>
+    <string name="report_range_from">From</string>
+    <string name="report_range_to">To</string>
+    <string name="report_range_invalid">The From date is after the To date. Fix the range to build the statement.</string>
 
     <!-- Backup (Phase 5) -->
     <string name="backup_screen_title">Backup</string>

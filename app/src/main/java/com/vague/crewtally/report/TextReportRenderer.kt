@@ -12,4 +12,7 @@ object TextReportRenderer {
 
     fun renderCompanyTotals(totals: CompanyTotals, strings: ReportStrings): String =
         ReportLines.forCompanyTotals(totals, strings).joinToString("\n")
+
+    fun renderProjectStatement(statement: ProjectStatement, strings: ReportStrings): String =
+        ReportLines.forProjectStatement(statement, strings).joinToString("\n")
 }

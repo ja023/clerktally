@@ -25,6 +25,9 @@ object ReportFileNames {
     fun companyReportFileName(companyName: String, extension: String): String =
         "${sanitize(companyName)}-report.$extension"
 
+    fun projectStatementFileName(projectName: String, extension: String): String =
+        "${sanitize(projectName)}-statement.$extension"
+
     private fun sanitize(name: String): String {
         val cleaned = name.trim().replace(UNSAFE_CHARS, "-").trim('-')
         return cleaned.ifBlank { "report" }

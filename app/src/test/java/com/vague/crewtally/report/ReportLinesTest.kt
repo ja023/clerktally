@@ -12,7 +12,9 @@ import org.junit.Test
 /**
  * Structural + phrasing assertions on [ReportLines]' output — the shared content both
  * [TextReportRenderer] and the PDF renderer draw from. Covers the WhatsApp-clean line shape,
- * deduction rendering, and the three owed/advance/paid-in-full phrasings.
+ * deduction rendering, the three owed/advance/paid-in-full phrasings, and (v1.1) the project
+ * statement's literal column header plus the company statement's dated activity lines and
+ * range header.
  */
 class ReportLinesTest {
 
@@ -116,16 +118,34 @@ class ReportLinesTest {
     }
 
     @Test
-    fun `company totals lines list each project's clerk rows and end with a grand total section`() {
-        val project = CompanyReportProjectInput(
-            "p1", "Warehouse Count", "USD",
-            listOf(CompanyReportClerkInput("c1", "Ali", earned = 5000, extras = 0, paid = 2000)),
+    fun `a negative earned total renders as a leading minus sign, never a garbled split`() {
+        // A deduction larger than the day's earnings (LOCKED decision #7: deductions may
+        // exceed earnings) drives earned negative — must read "-$5.00", never "$-5.-00".
+        val attendance = listOf(AttendanceEntryEntity("a1", "p", "c", jan1, present = true, rateSnapshot = 2000))
+        val extras = listOf(ExtraPayLineWithDate(ExtraPayLineEntity("x1", "a1", "Damage", -7000), jan1))
+        val statement = ClerkStatementBuilder.build("Ali", "Project", "Acme", "USD", attendance, extras, emptyList())
+
+        val lines = ReportLines.forClerkStatement(statement, strings)
+        val earnedLine = lines.single { it.startsWith("Earned:") }
+
+        assertEquals("Earned: -$50.00", earnedLine)
+    }
+
+    @Test
+    fun `company statement lines list each project's clerk rows and end with a grand total section`() {
+        val ali = ReportClerkLedgerInput(
+            "c1",
+            "Ali",
+            attendance = listOf(AttendanceEntryEntity("a1", "p1", "c1", jan1, present = true, rateSnapshot = 5000)),
+            extras = emptyList(),
+            payments = listOf(PaymentEntity("pay1", "p1", "c1", jan1, 2000, "")),
         )
+        val project = CompanyReportProjectInput("p1", "Warehouse Count", "USD", listOf(ali))
         val totals = CompanyTotalsBuilder.build("Acme", listOf(project))
 
         val lines = ReportLines.forCompanyTotals(totals, strings)
 
-        assertEquals("CrewTally - Company Report", lines[0])
+        assertEquals("CrewTally - Company Statement", lines[0])
         assertEquals("Acme", lines[1])
         assertTrue(lines.any { it.contains("Warehouse Count") })
         assertTrue(lines.any { it.contains("Ali") && it.contains("$30.00 owed") })
@@ -133,12 +153,119 @@ class ReportLinesTest {
     }
 
     @Test
-    fun `an empty company report states none recorded rather than an empty body`() {
+    fun `company statement header states the selected range explicitly`() {
+        val allTime = CompanyTotalsBuilder.build("Acme", emptyList())
+        val bounded = CompanyTotalsBuilder.build("Acme", emptyList(), ReportDateRange(jan1, jan10))
+
+        assertEquals(strings.allTimeLabel, ReportLines.forCompanyTotals(allTime, strings)[2])
+        assertEquals("Jan 1, 2026 - Jan 10, 2026", ReportLines.forCompanyTotals(bounded, strings)[2])
+    }
+
+    @Test
+    fun `company statement activity lines render a present day, a signed extra, and a negative payment`() {
+        val ali = ReportClerkLedgerInput(
+            "c1",
+            "Ali",
+            attendance = listOf(AttendanceEntryEntity("a1", "p1", "c1", jan1, present = true, rateSnapshot = 2500)),
+            extras = listOf(ExtraPayLineWithDate(ExtraPayLineEntity("x1", "a1", "Bonus", -500), jan1)),
+            payments = listOf(PaymentEntity("pay1", "p1", "c1", jan10, 1000, "part payment")),
+        )
+        val project = CompanyReportProjectInput("p1", "Warehouse Count", "USD", listOf(ali))
+        val totals = CompanyTotalsBuilder.build("Acme", listOf(project))
+
+        val lines = ReportLines.forCompanyTotals(totals, strings)
+
+        val dayLine = lines.single { it.contains("Ali - day") }
+        assertTrue(dayLine.contains("$25.00"))
+
+        val extraLine = lines.single { it.contains("Ali - Bonus") }
+        assertTrue(extraLine.contains("-$5.00"))
+
+        val paymentLine = lines.single { it.contains("Payment -> Ali") }
+        assertTrue(paymentLine.contains("-$10.00"))
+        assertTrue(paymentLine.contains("part payment"))
+    }
+
+    @Test
+    fun `company statement renders a negative clerk earned total with a leading minus sign`() {
+        // Same negative-earned scenario (deduction exceeds the day's earnings) surfaced in
+        // both the per-clerk row and the project subtotal line.
+        val ali = ReportClerkLedgerInput(
+            "c1",
+            "Ali",
+            attendance = listOf(AttendanceEntryEntity("a1", "p1", "c1", jan1, present = true, rateSnapshot = 2000)),
+            extras = listOf(ExtraPayLineWithDate(ExtraPayLineEntity("x1", "a1", "Damage", -7000), jan1)),
+        )
+        val project = CompanyReportProjectInput("p1", "Warehouse Count", "USD", listOf(ali))
+        val totals = CompanyTotalsBuilder.build("Acme", listOf(project))
+
+        val lines = ReportLines.forCompanyTotals(totals, strings)
+
+        assertTrue(lines.any { it.contains("Ali") && it.contains("earned -$50.00") })
+        assertTrue(lines.any { it.startsWith(" Earned -$50.00") })
+    }
+
+    @Test
+    fun `an empty company statement states none recorded rather than an empty body`() {
         val totals = CompanyTotalsBuilder.build("Acme", emptyList())
 
         val lines = ReportLines.forCompanyTotals(totals, strings)
 
         assertTrue(lines.contains(strings.noneRecordedLabel))
+    }
+
+    @Test
+    fun `project statement lines lead with the literal LOCKED column header and a PROJECT TOTAL line`() {
+        val ali = ReportClerkLedgerInput(
+            "c1",
+            "Ali",
+            attendance = listOf(AttendanceEntryEntity("a1", "p1", "c1", jan1, present = true, rateSnapshot = 5000)),
+        )
+        val statement = ProjectStatementBuilder.build("Warehouse Count", "Acme", "USD", listOf(ali))
+
+        val lines = ReportLines.forProjectStatement(statement, strings)
+
+        assertEquals("CrewTally - Project Statement", lines[0])
+        assertEquals("Warehouse Count - Acme", lines[1])
+        assertTrue(lines.any { it == strings.projectStatementHeaderLabel })
+        assertTrue(lines.any { it.contains("Ali") && it.contains("1") && it.contains("$50.00") })
+        assertTrue(lines.any { it == strings.projectTotalLabel })
+    }
+
+    @Test
+    fun `project statement renders a negative clerk earned row and PROJECT TOTAL with a leading minus sign`() {
+        // Same negative-earned scenario (deduction exceeds the day's earnings), asserted on
+        // both the per-clerk row and the PROJECT TOTAL line.
+        val ali = ReportClerkLedgerInput(
+            "c1",
+            "Ali",
+            attendance = listOf(AttendanceEntryEntity("a1", "p1", "c1", jan1, present = true, rateSnapshot = 2000)),
+            extras = listOf(ExtraPayLineWithDate(ExtraPayLineEntity("x1", "a1", "Damage", -7000), jan1)),
+        )
+        val statement = ProjectStatementBuilder.build("Warehouse Count", "Acme", "USD", listOf(ali))
+
+        val lines = ReportLines.forProjectStatement(statement, strings)
+
+        assertTrue(lines.any { it.contains("Ali") && it.contains("-$50.00") })
+        assertTrue(lines.any { it.startsWith(" ${strings.earnedLabel}: -$50.00") })
+    }
+
+    @Test
+    fun `project statement header states All time when no range is selected`() {
+        val statement = ProjectStatementBuilder.build("Project", "Acme", "USD", emptyList())
+
+        val lines = ReportLines.forProjectStatement(statement, strings)
+
+        assertTrue(lines[2].contains(strings.allTimeLabel))
+    }
+
+    @Test
+    fun `an empty project statement states none recorded in its clerk table`() {
+        val statement = ProjectStatementBuilder.build("Project", "Acme", "USD", emptyList())
+
+        val lines = ReportLines.forProjectStatement(statement, strings)
+
+        assertTrue(lines.any { it.contains(strings.noneRecordedLabel) })
     }
 }
 
@@ -146,7 +273,7 @@ class ReportLinesTest {
 fun testReportStrings(): ReportStrings = ReportStrings(
     appName = "CrewTally",
     clerkStatementTitle = "Clerk Statement",
-    companyReportTitle = "Company Report",
+    companyReportTitle = "Company Statement",
     daysWorkedLabel = "Days worked",
     extrasLabel = "Extras",
     paymentsLabel = "Payments",
@@ -165,4 +292,10 @@ fun testReportStrings(): ReportStrings = ReportStrings(
     summaryLineTemplate = "%1\$s: %2\$d days x %3\$s, extras %4\$s, paid %5\$s, %6\$s",
     summaryLineVaryingRateTemplate = "%1\$s: %2\$d days, earned %3\$s, extras %4\$s, paid %5\$s, %6\$s",
     pageLabelTemplate = "Page %1\$d of %2\$d",
+    projectStatementTitle = "Project Statement",
+    projectStatementHeaderLabel = "CLERK / DAYS / EARNED / PAID / OWED",
+    projectTotalLabel = "PROJECT TOTAL",
+    allTimeLabel = "All time",
+    dayActivityLabel = "day",
+    paymentArrowTemplate = "Payment -> %1\$s",
 )

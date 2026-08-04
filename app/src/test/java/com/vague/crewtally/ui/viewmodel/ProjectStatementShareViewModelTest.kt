@@ -31,14 +31,15 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Headless tests for [CompanyReportShareViewModel]'s generation-failure path — mirrors
- * [ClerkStatementShareViewModelTest] (see that file's KDoc for the file-writer failure shape).
+ * Headless tests for [ProjectStatementShareViewModel] (NEW v1.1): the generation-failure path
+ * (mirroring [ClerkStatementShareViewModelTest]) plus the range selector regenerating the
+ * preview when the preset changes.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class CompanyReportShareViewModelTest {
+class ProjectStatementShareViewModelTest {
 
-    private lateinit var companyDao: FakeCompanyDao
     private lateinit var projectDao: FakeProjectDao
+    private lateinit var companyDao: FakeCompanyDao
     private lateinit var clerkDao: FakeClerkDao
     private lateinit var attendanceEntryDao: FakeAttendanceEntryDao
     private lateinit var extraPayLineDao: FakeExtraPayLineDao
@@ -46,6 +47,7 @@ class CompanyReportShareViewModelTest {
     private lateinit var testDispatcher: TestDispatcher
 
     private val jan1 = LocalDate.of(2026, 1, 1)
+    private val feb1 = LocalDate.of(2026, 2, 1)
 
     @Before
     fun setUp() {
@@ -57,7 +59,10 @@ class CompanyReportShareViewModelTest {
         }
         clerkDao = FakeClerkDao().apply { seed(ClerkEntity(id = "c1", name = "Ali")) }
         attendanceEntryDao = FakeAttendanceEntryDao().apply {
-            seed(AttendanceEntryEntity("a1", "p1", "c1", jan1, present = true, rateSnapshot = 5000))
+            seed(
+                AttendanceEntryEntity("a1", "p1", "c1", jan1, present = true, rateSnapshot = 5000),
+                AttendanceEntryEntity("a2", "p1", "c1", feb1, present = true, rateSnapshot = 5000),
+            )
         }
         extraPayLineDao = FakeExtraPayLineDao(attendanceEntryDao)
         attendanceEntryDao.extraPayLineDao = extraPayLineDao
@@ -69,26 +74,27 @@ class CompanyReportShareViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun buildViewModel(fileWriter: FakeReportFileWriter) = CompanyReportShareViewModel(
-        companyId = "co1",
-        companyDao = companyDao,
+    private fun buildViewModel(fileWriter: FakeReportFileWriter, today: LocalDate = jan1) = ProjectStatementShareViewModel(
+        projectId = "p1",
         projectDao = projectDao,
+        companyDao = companyDao,
         clerkDao = clerkDao,
         attendanceEntryDao = attendanceEntryDao,
         extraPayLineDao = extraPayLineDao,
         paymentDao = paymentDao,
         fileWriter = fileWriter,
         strings = testReportStrings(),
+        today = today,
         ioDispatcher = testDispatcher,
     )
 
     @Test
     fun `a write failure resets isGenerating and surfaces generationFailure`() = runTest {
         val viewModel = buildViewModel(FakeReportFileWriter(shouldFail = true))
-        var latest = CompanyReportShareUiState()
+        var latest = ProjectStatementShareUiState()
         val job = launch(Dispatchers.Unconfined) { viewModel.uiState.collect { latest = it } }
 
-        viewModel.onEvent(CompanyReportShareEvent.ShareAsPdf)
+        viewModel.onEvent(ProjectStatementShareEvent.ShareAsText)
         advanceUntilIdle()
 
         assertFalse(latest.isGenerating)
@@ -100,14 +106,14 @@ class CompanyReportShareViewModelTest {
     @Test
     fun `dismissing the generation failure clears it`() = runTest {
         val viewModel = buildViewModel(FakeReportFileWriter(shouldFail = true))
-        var latest = CompanyReportShareUiState()
+        var latest = ProjectStatementShareUiState()
         val job = launch(Dispatchers.Unconfined) { viewModel.uiState.collect { latest = it } }
 
-        viewModel.onEvent(CompanyReportShareEvent.ShareAsPdf)
+        viewModel.onEvent(ProjectStatementShareEvent.ShareAsText)
         advanceUntilIdle()
         assertTrue(latest.generationFailure)
 
-        viewModel.onEvent(CompanyReportShareEvent.DismissGenerationFailure)
+        viewModel.onEvent(ProjectStatementShareEvent.DismissGenerationFailure)
         assertFalse(latest.generationFailure)
 
         job.cancel()
@@ -116,10 +122,10 @@ class CompanyReportShareViewModelTest {
     @Test
     fun `a successful write leaves isGenerating false with no failure`() = runTest {
         val viewModel = buildViewModel(FakeReportFileWriter(shouldFail = false))
-        var latest = CompanyReportShareUiState()
+        var latest = ProjectStatementShareUiState()
         val job = launch(Dispatchers.Unconfined) { viewModel.uiState.collect { latest = it } }
 
-        viewModel.onEvent(CompanyReportShareEvent.ShareAsPdf)
+        viewModel.onEvent(ProjectStatementShareEvent.ShareAsText)
         advanceUntilIdle()
 
         assertFalse(latest.isGenerating)
@@ -129,56 +135,48 @@ class CompanyReportShareViewModelTest {
     }
 
     @Test
-    fun `switching to Last month regenerates the preview and drops out-of-range activity`() = runTest {
-        // setUp already seeded attendance on jan1; "today" for this test is feb1, so Last month = January.
-        val feb1 = LocalDate.of(2026, 2, 1)
-        val viewModel = CompanyReportShareViewModel(
-            companyId = "co1",
-            companyDao = companyDao,
-            projectDao = projectDao,
-            clerkDao = clerkDao,
-            attendanceEntryDao = attendanceEntryDao,
-            extraPayLineDao = extraPayLineDao,
-            paymentDao = paymentDao,
-            fileWriter = FakeReportFileWriter(),
-            strings = testReportStrings(),
-            today = feb1,
-            ioDispatcher = testDispatcher,
-        )
-        var latest = CompanyReportShareUiState()
+    fun `default range is All time and includes activity from every month`() = runTest {
+        val viewModel = buildViewModel(FakeReportFileWriter())
+        var latest = ProjectStatementShareUiState()
         val job = launch(Dispatchers.Unconfined) { viewModel.uiState.collect { latest = it } }
         advanceUntilIdle()
-        assertEquals(1, latest.totals?.projectSections?.single()?.clerkRows?.size)
 
-        viewModel.onEvent(CompanyReportShareEvent.RangePresetChanged(ReportRangePreset.LAST_MONTH))
-        advanceUntilIdle()
-
-        assertEquals(1, latest.totals?.projectSections?.single()?.clerkRows?.size)
-        assertEquals(ReportRangePreset.LAST_MONTH, latest.rangePreset)
+        assertEquals(ReportRangePreset.ALL_TIME, latest.rangePreset)
+        assertEquals(2, latest.statement?.clerkRows?.single()?.daysWorked)
 
         job.cancel()
     }
 
     @Test
-    fun `selecting CUSTOM and setting both dates scopes the totals to that window`() = runTest {
-        // Re-seed with a second day outside the custom window (FakeAttendanceEntryDao.seed
-        // replaces, not appends) — jan1 stays in range, feb2 should drop out.
-        val feb2 = LocalDate.of(2026, 2, 2)
-        attendanceEntryDao.seed(
-            AttendanceEntryEntity("a1", "p1", "c1", jan1, present = true, rateSnapshot = 5000),
-            AttendanceEntryEntity("a2", "p1", "c1", feb2, present = true, rateSnapshot = 5000),
-        )
-        val viewModel = buildViewModel(FakeReportFileWriter())
-        var latest = CompanyReportShareUiState()
+    fun `switching to This month regenerates the preview scoped to today's month`() = runTest {
+        val viewModel = buildViewModel(FakeReportFileWriter(), today = jan1)
+        var latest = ProjectStatementShareUiState()
         val job = launch(Dispatchers.Unconfined) { viewModel.uiState.collect { latest = it } }
         advanceUntilIdle()
 
-        viewModel.onEvent(CompanyReportShareEvent.RangePresetChanged(ReportRangePreset.CUSTOM))
-        viewModel.onEvent(CompanyReportShareEvent.CustomStartChanged(jan1))
-        viewModel.onEvent(CompanyReportShareEvent.CustomEndChanged(jan1))
+        viewModel.onEvent(ProjectStatementShareEvent.RangePresetChanged(ReportRangePreset.THIS_MONTH))
         advanceUntilIdle()
 
-        assertEquals(1, latest.totals?.projectSections?.single()?.activityLines?.size)
+        // Only the Jan 1 attendance row falls inside January (today's month); the Feb 1 row drops out.
+        assertEquals(1, latest.statement?.clerkRows?.single()?.daysWorked)
+
+        job.cancel()
+    }
+
+    @Test
+    fun `selecting CUSTOM and setting both dates scopes the statement to that window`() = runTest {
+        val viewModel = buildViewModel(FakeReportFileWriter())
+        var latest = ProjectStatementShareUiState()
+        val job = launch(Dispatchers.Unconfined) { viewModel.uiState.collect { latest = it } }
+        advanceUntilIdle()
+
+        viewModel.onEvent(ProjectStatementShareEvent.RangePresetChanged(ReportRangePreset.CUSTOM))
+        viewModel.onEvent(ProjectStatementShareEvent.CustomStartChanged(jan1))
+        viewModel.onEvent(ProjectStatementShareEvent.CustomEndChanged(jan1))
+        advanceUntilIdle()
+
+        // Only the Jan 1 attendance row falls inside the custom window; the Feb 1 row drops out.
+        assertEquals(1, latest.statement?.clerkRows?.single()?.daysWorked)
         assertEquals(jan1, latest.customStart)
         assertEquals(jan1, latest.customEnd)
         assertFalse(latest.isRangeInvalid)
@@ -190,52 +188,39 @@ class CompanyReportShareViewModelTest {
     fun `selecting CUSTOM without touching dates defaults both to today, matching what is applied`() = runTest {
         // Regression for the bug where displayed fields fell back to today for display only
         // while null/null state silently applied All time underneath.
-        val viewModel = CompanyReportShareViewModel(
-            companyId = "co1",
-            companyDao = companyDao,
-            projectDao = projectDao,
-            clerkDao = clerkDao,
-            attendanceEntryDao = attendanceEntryDao,
-            extraPayLineDao = extraPayLineDao,
-            paymentDao = paymentDao,
-            fileWriter = FakeReportFileWriter(),
-            strings = testReportStrings(),
-            today = jan1,
-            ioDispatcher = testDispatcher,
-        )
-        var latest = CompanyReportShareUiState()
+        val viewModel = buildViewModel(FakeReportFileWriter(), today = jan1)
+        var latest = ProjectStatementShareUiState()
         val job = launch(Dispatchers.Unconfined) { viewModel.uiState.collect { latest = it } }
         advanceUntilIdle()
 
-        viewModel.onEvent(CompanyReportShareEvent.RangePresetChanged(ReportRangePreset.CUSTOM))
+        viewModel.onEvent(ProjectStatementShareEvent.RangePresetChanged(ReportRangePreset.CUSTOM))
         advanceUntilIdle()
 
         assertEquals(jan1, latest.customStart)
         assertEquals(jan1, latest.customEnd)
         assertFalse(latest.isRangeInvalid)
-        // Applied range is jan1..jan1 (today), matching the displayed dates — the seeded Jan 1
-        // attendance row is still in range, proving All time was NOT silently applied instead.
-        assertEquals(1, latest.totals?.projectSections?.single()?.clerkRows?.size)
+        // Applied range is jan1..jan1 (today), matching the displayed dates — only the Jan 1
+        // attendance row is in range, proving All time was NOT silently applied instead.
+        assertEquals(1, latest.statement?.clerkRows?.single()?.daysWorked)
 
         job.cancel()
     }
 
     @Test
-    fun `an inverted custom range exposes isRangeInvalid and builds no totals`() = runTest {
-        val feb1 = LocalDate.of(2026, 2, 1)
+    fun `an inverted custom range exposes isRangeInvalid and builds no statement`() = runTest {
         val viewModel = buildViewModel(FakeReportFileWriter())
-        var latest = CompanyReportShareUiState()
+        var latest = ProjectStatementShareUiState()
         val job = launch(Dispatchers.Unconfined) { viewModel.uiState.collect { latest = it } }
         advanceUntilIdle()
 
-        viewModel.onEvent(CompanyReportShareEvent.RangePresetChanged(ReportRangePreset.CUSTOM))
-        viewModel.onEvent(CompanyReportShareEvent.CustomStartChanged(feb1))
-        viewModel.onEvent(CompanyReportShareEvent.CustomEndChanged(jan1))
+        viewModel.onEvent(ProjectStatementShareEvent.RangePresetChanged(ReportRangePreset.CUSTOM))
+        viewModel.onEvent(ProjectStatementShareEvent.CustomStartChanged(feb1))
+        viewModel.onEvent(ProjectStatementShareEvent.CustomEndChanged(jan1))
         advanceUntilIdle()
 
         assertTrue(latest.isRangeInvalid)
-        assertEquals(null, latest.totals)
-        // The company identity itself is still loaded; only the totals are withheld.
+        assertEquals(null, latest.statement)
+        // The project identity itself is still loaded; only the statement is withheld.
         assertTrue(latest.isLoaded)
 
         job.cancel()
