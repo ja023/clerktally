@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  CrewTally launcher monochrome layer (Android 13+ themed icons). Identical geometry to
+  drawable/ic_launcher_foreground.xml, but flattened to a single opaque fill: themed icons
+  re-tint the shape from the system palette and only the alpha channel survives, so the
+  two-colour brand mark is carried here as one solid silhouette. Keep the two files in sync.
+
+  Referenced by mipmap-anydpi-v26/ic_launcher.xml and ic_launcher_round.xml.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Frame: left edge, bottom edge, then the two stubs that leave the
+         top-right corner open. -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M31,31 H34.45 V77 H31 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M31,73.55 H77 V77 H31 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M31,31 H53.164 V34.45 H31 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M73.55,54.941 H77 V77 H73.55 Z" />
+
+    <!-- Arrow: corner bracket (top bar + right bar), the 45 degree shaft,
+         and the L-shaped arrowhead pointing down-left. -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M56.927,31 H77 V34.764 H56.927 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M73.236,31 H77 V51.177 H73.236 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M51.282,37.639 H55.045 V56.718 H51.282 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M51.282,52.955 H70.466 V56.718 H51.282 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M54.157,56.509 L76.791,33.875 L74.125,31.209 L51.491,53.843 Z" />
+</vector>

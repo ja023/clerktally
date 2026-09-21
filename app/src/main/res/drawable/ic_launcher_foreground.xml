@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  CrewTally launcher foreground: the universal counting mark — four vertical strokes plus a
-  diagonal fifth stroke crossing them (a "tally of five"). Hand-authored geometry, no external
-  tooling. Strokes are near-white with bold, round-capped weight so the mark reads at 48px, and
-  the whole cluster sits inside the adaptive-icon safe zone (the central ~66dp circle of the
-  108dp canvas) so no mark is clipped by any launcher mask shape.
+  CrewTally launcher foreground: the CrewTally brand mark (LOCKED 2026-09-21), a mid-grey
+  square frame left open at its top-right corner, with a navy arrow breaking in through the
+  opening: an L-shaped corner bracket, a 45 degree shaft, and an arrowhead pointing down-left
+  into the frame. Redrawn as vector geometry from design/logo-source.jpeg with both fills
+  sampled from that image (grey #6F7072, navy #013B7A); design/logo.svg is the same
+  geometry on a 1000 viewBox. This replaces the v1.0 tally-marks icon.
 
-  This same drawable is reused as the adaptive icon's monochrome layer (see
-  mipmap-anydpi-v26/ic_launcher.xml): Android 13+ themed icons ignore these colors and re-tint
-  the shape from the drawable's alpha, so the identical strokes carry both the colored and the
-  themed icon.
+  The mark is a full square, so it is sized to the largest square that fits the adaptive-icon
+  safe zone (the central 66dp CIRCLE of the 108dp canvas). That limit is 66/sqrt(2) = 46.67dp,
+  so the mark is 46dp centred on (54,54), spanning 31..77; its corners sit 32.5dp from centre,
+  inside the 33dp radius. No launcher mask (circle, squircle, rounded square, teardrop) clips it.
+
+  The mark is two-colour, so the adaptive icon's monochrome layer does NOT reuse this file:
+  see drawable/ic_launcher_monochrome.xml, referenced from mipmap-anydpi-v26/ic_launcher.xml.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -17,32 +21,36 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Four vertical strokes, evenly spaced. -->
+    <!-- Grey frame: left edge, bottom edge, then the two stubs that leave the
+         top-right corner open. -->
     <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="7"
-        android:strokeLineCap="round"
-        android:pathData="M41,38 L41,70" />
+        android:fillColor="#6F7072"
+        android:pathData="M31,31 H34.45 V77 H31 Z" />
     <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="7"
-        android:strokeLineCap="round"
-        android:pathData="M50,38 L50,70" />
+        android:fillColor="#6F7072"
+        android:pathData="M31,73.55 H77 V77 H31 Z" />
     <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="7"
-        android:strokeLineCap="round"
-        android:pathData="M59,38 L59,70" />
+        android:fillColor="#6F7072"
+        android:pathData="M31,31 H53.164 V34.45 H31 Z" />
     <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="7"
-        android:strokeLineCap="round"
-        android:pathData="M68,38 L68,70" />
+        android:fillColor="#6F7072"
+        android:pathData="M73.55,54.941 H77 V77 H73.55 Z" />
 
-    <!-- The diagonal fifth stroke, lower-left to upper-right, crossing all four. -->
+    <!-- Navy arrow: corner bracket (top bar + right bar), the 45 degree shaft,
+         and the L-shaped arrowhead pointing down-left. -->
     <path
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="7"
-        android:strokeLineCap="round"
-        android:pathData="M35,71 L74,37" />
+        android:fillColor="#013B7A"
+        android:pathData="M56.927,31 H77 V34.764 H56.927 Z" />
+    <path
+        android:fillColor="#013B7A"
+        android:pathData="M73.236,31 H77 V51.177 H73.236 Z" />
+    <path
+        android:fillColor="#013B7A"
+        android:pathData="M51.282,37.639 H55.045 V56.718 H51.282 Z" />
+    <path
+        android:fillColor="#013B7A"
+        android:pathData="M51.282,52.955 H70.466 V56.718 H51.282 Z" />
+    <path
+        android:fillColor="#013B7A"
+        android:pathData="M54.157,56.509 L76.791,33.875 L74.125,31.209 L51.491,53.843 Z" />
 </vector>
