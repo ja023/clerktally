@@ -3,6 +3,8 @@ package com.vague.crewtally.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
  * The root CrewTally theme. Wraps [MaterialTheme] with the CrewTally color schemes,
@@ -21,13 +23,20 @@ fun CrewTallyTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) CrewTallyDarkScheme else CrewTallyLightScheme,
-        typography = CrewTallyTypography,
-        shapes = CrewTallyShapes,
-        content = content,
-    )
+    CompositionLocalProvider(
+        LocalCrewTallyExtraColors provides if (darkTheme) CrewTallyDarkExtraColors else CrewTallyLightExtraColors,
+    ) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) CrewTallyDarkScheme else CrewTallyLightScheme,
+            typography = CrewTallyTypography,
+            shapes = CrewTallyShapes,
+            content = content,
+        )
+    }
 }
+
+/** Backs [CrewTallyTheme.extraColors] — see [CrewTallyExtraColors]'s KDoc for what belongs here. */
+private val LocalCrewTallyExtraColors = staticCompositionLocalOf { CrewTallyLightExtraColors }
 
 /**
  * Central accessor for CrewTally design tokens that don't live on [MaterialTheme].
@@ -39,4 +48,5 @@ object CrewTallyTheme {
     val radius: CrewTallyRadius get() = CrewTallyRadius
     val shape: CrewTallyShape get() = CrewTallyShape
     val type: CrewTallyType get() = CrewTallyType
+    val extraColors: CrewTallyExtraColors @Composable get() = LocalCrewTallyExtraColors.current
 }

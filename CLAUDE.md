@@ -166,8 +166,9 @@ Remaining (post-release polish unless noted):
 - **ContactSearchField suggestion liveRegion** re-announces the full ≤5-row list on every
   debounced keystroke; consider announcing only a match count while typing. Needs real TalkBack
   device verification before changing.
-- **CrewTallyOutlinedButton dark-theme contrast** ~3.5:1 (primary BlueLight on dark surface) —
-  borderline AA for 18sp SemiBold. Revisit the dark `primary` token with a visual check.
+- ~~**CrewTallyOutlinedButton dark-theme contrast** ~3.5:1~~ PAID 2026-09-22 (v1.2 gate): dark-only
+  `CrewTallyExtraColors` token `BlueOutlineDark #5A94C9` for outlined-button label + border, 5.76:1 on
+  SurfaceDark; `primary` and light theme untouched.
 - **No "Saving…" liveRegion status** on ordinary form saves (local Room writes, near-instant;
   BackupScreen already does it right). Completeness only.
 - **Extract shared `RecordLifecycleActions` composable** (archive/unarchive/delete buttons + 3
@@ -179,6 +180,9 @@ Remaining (post-release polish unless noted):
 - **(v1.1 gate) NavController passed to leaf report screens** for back-only use; if ever cleaned up, switch to `onBack: () -> Unit` codebase-wide, not just the report screens.
 - **(v1.1 gate) Route `report/project/pick` vs template `report/project/{projectId}`** sit at the same depth; androidx route scoring prefers the literal so it resolves correctly — confirm once on device; if ever renamed use `report/pick-project`.
 - **(v1.1 gate) TalkBack device checks pending**: (a) focus behavior when the Custom date row unmounts in `CrewTallyReportRangeSelector`; (b) initial a11y focus on the five new/changed report screens (v1.0 parity, app-wide pattern); (c) Material3 double From/To date-picker adjacency announcements.
+- **(v1.2 gate, 2026-09-22) Route trio `report/clerk/{projectId}/{clerkId}` vs `report/clerk/{clerkId}/active|history`** at the same depth: literal segments win androidx route scoring (same property as `report/project/pick`); confirm ONCE on device that the profile's two Share buttons open the bucket screens, not the per-project statement. If ever renamed, use `report/clerk-active/{clerkId}`.
+- **(v1.2 gate) "Not on any active projects yet" wording** on the Active/History statement screen counts only bucket projects with at least one ledger row (matches the v1.1 drop-empty convention), so a clerk freshly rostered with no attendance reads as "not on any active projects". Change only if it confuses in real use (would need a roster-membership count).
+- **(v1.2 gate) `ClerkMultiProjectStatementShareViewModel` filters whole-book flows in memory** like the v1.1 report ViewModels; sweep together when that debt item is paid.
 - **Permission re-check on resume** in ContactSearchField (granted via system Settings while form open) — only if it shows up in real use.
 - ⚠️ **Type.kt `labelMedium`/`labelSmall` are 14sp** — never reach for them for anything a user must read (locked ≥16sp rule). (Phase 6 removed the one violation: bottom-nav labels.)
 

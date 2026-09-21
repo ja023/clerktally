@@ -21,6 +21,13 @@ import com.vague.crewtally.ui.theme.CrewTallyTheme
  * form whose primary action is Save) needs. Sized at [CrewTallyDimens.minTarget] (48dp, not the
  * 56dp primary target) matching every other secondary action in the app.
  *
+ * Content and border colors come from `CrewTallyTheme.extraColors` rather than
+ * `MaterialTheme.colorScheme.primary` / `.outline` directly (v1.2 a11y fix): dark theme's
+ * `colorScheme.primary` only reaches ~3.5:1 against the dark background, below the 4.5:1 floor
+ * this button needs now that v1.2 promotes it to primary weight (full-width on the clerk profile
+ * and balance screen) — see [com.vague.crewtally.ui.theme.CrewTallyDarkExtraColors] for the fix
+ * and the exact contrast math. Light theme is unaffected.
+ *
  * @param text visible button label; also used as the accessibility name.
  * @param contentDescription overrides the accessibility name when the visible label alone isn't descriptive enough.
  */
@@ -36,8 +43,8 @@ fun CrewTallyOutlinedButton(
         onClick = onClick,
         enabled = enabled,
         shape = CrewTallyShape.button,
-        border = BorderStroke(CrewTallyTheme.dimens.borderThin, MaterialTheme.colorScheme.outline),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+        border = BorderStroke(CrewTallyTheme.dimens.borderThin, CrewTallyTheme.extraColors.outlinedButtonBorder),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = CrewTallyTheme.extraColors.outlinedButtonContent),
         contentPadding = PaddingValues(
             horizontal = CrewTallyTheme.dimens.spaceXl,
             vertical = CrewTallyTheme.dimens.spaceSm,

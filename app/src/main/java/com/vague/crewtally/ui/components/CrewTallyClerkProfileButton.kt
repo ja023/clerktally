@@ -21,16 +21,32 @@ import com.vague.crewtally.ui.theme.CrewTallyTheme
  * merges its descendants into one accessibility node, which would swallow this button for a
  * screen-reader user. As its own sibling it stays a separate [CrewTallyDimens.minTarget] (48dp)
  * focusable target with its own spoken name.
+ *
+ * @param projectName when non-null, names the project in the spoken description too (v1.2 a11y
+ *   fix: Home's owed-clerks rows can show the SAME clerk owed on two projects back to back, which
+ *   otherwise reads as two identically-named buttons to TalkBack). Project roster rows leave this
+ *   null and keep the plain "Open clerk profile for <name>" wording, since a roster row is
+ *   already scoped to one project.
  */
 @Composable
-fun CrewTallyClerkProfileButton(clerkName: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun CrewTallyClerkProfileButton(
+    clerkName: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    projectName: String? = null,
+) {
+    val description = if (projectName != null) {
+        stringResource(R.string.cd_open_clerk_profile_for_project, clerkName, projectName)
+    } else {
+        stringResource(R.string.cd_open_clerk_profile, clerkName)
+    }
     IconButton(
         onClick = onClick,
         modifier = modifier.size(CrewTallyTheme.dimens.minTarget),
     ) {
         Icon(
             imageVector = Icons.Filled.Description,
-            contentDescription = stringResource(R.string.cd_open_clerk_profile, clerkName),
+            contentDescription = description,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(CrewTallyTheme.dimens.iconMd),
         )

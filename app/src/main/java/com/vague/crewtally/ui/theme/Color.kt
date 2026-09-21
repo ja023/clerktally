@@ -21,6 +21,13 @@ internal object CrewTallyPalette {
     val BlueContainer = Color(0xFFD3E4F5)
     val OnBlueContainer = Color(0xFF0B2740)
 
+    // Dark-theme-only outlined-button token (v1.2 a11y fix). BlueLight (used as dark `primary`)
+    // only reaches ~3.5:1 against SurfaceDark (#121316) — below the 4.5:1 floor CrewTallyOutlinedButton
+    // needs once v1.2 promotes it to primary weight (full-width on the clerk profile + balance
+    // screen). This lighter blue clears ~5.76:1 there (WCAG relative-luminance formula) — see
+    // [CrewTallyDarkExtraColors] for where it's used.
+    val BlueOutlineDark = Color(0xFF5A94C9)
+
     // Accent for money-positive / confirmations.
     val Green = Color(0xFF2E7D46)
     val GreenContainer = Color(0xFFC9EBD2)
@@ -119,4 +126,41 @@ val CrewTallyDarkScheme = darkColorScheme(
     errorContainer = CrewTallyPalette.DangerContainerDark,
     onErrorContainer = CrewTallyPalette.OnDangerContainerDark,
     scrim = CrewTallyPalette.Black,
+)
+
+/**
+ * Design tokens that don't map onto a Material 3 [androidx.compose.material3.ColorScheme] role
+ * but still need to differ between light and dark theme. New fields belong here, not squeezed
+ * into an existing ColorScheme role that wasn't designed for them — see [CrewTallyDarkExtraColors]
+ * for why `colorScheme.primary` itself couldn't be reused for this.
+ */
+data class CrewTallyExtraColors(
+    val outlinedButtonContent: Color,
+    val outlinedButtonBorder: Color,
+)
+
+/**
+ * Light theme: [CrewTallyOutlinedButton][com.vague.crewtally.ui.components.CrewTallyOutlinedButton]
+ * keeps its original colors here, mirroring [CrewTallyLightScheme]'s `primary` / `outline` as
+ * literals — light theme was never the contrast problem (v1.2 a11y fix), so it stays exactly
+ * as it was.
+ */
+val CrewTallyLightExtraColors = CrewTallyExtraColors(
+    outlinedButtonContent = CrewTallyPalette.Blue,
+    outlinedButtonBorder = CrewTallyPalette.OutlineLight,
+)
+
+/**
+ * Dark theme needs its own token: `colorScheme.primary` there is [CrewTallyPalette.BlueLight],
+ * which only reaches ~3.5:1 against the dark background (#121316) — below the 4.5:1 floor for
+ * 18sp SemiBold label text once v1.2 promotes this button to primary weight (two full-width
+ * buttons on the clerk profile, one on the balance screen). [CrewTallyPalette.BlueOutlineDark]
+ * clears ~5.76:1 (verified with the WCAG relative-luminance formula) and is used for BOTH the
+ * label and the border, so the outline reads as a matching color rather than a mismatched grey
+ * ring. `colorScheme.primary` itself is deliberately left untouched here — filled buttons and
+ * their onPrimary contrast (fixed separately in Phase 6) are unaffected by this change.
+ */
+val CrewTallyDarkExtraColors = CrewTallyExtraColors(
+    outlinedButtonContent = CrewTallyPalette.BlueOutlineDark,
+    outlinedButtonBorder = CrewTallyPalette.BlueOutlineDark,
 )

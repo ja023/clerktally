@@ -48,6 +48,7 @@ import com.vague.crewtally.ui.components.CrewTallyInlineError
 import com.vague.crewtally.ui.components.CrewTallyReportRangeSelector
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.util.owedDisplayText
+import com.vague.crewtally.ui.util.shareButtonDisabledDescription
 import com.vague.crewtally.ui.util.shareFile
 import com.vague.crewtally.ui.viewmodel.ClerkMultiProjectStatementShareEvent
 import com.vague.crewtally.ui.viewmodel.ClerkMultiProjectStatementShareUiState
@@ -94,9 +95,16 @@ fun ClerkMultiProjectStatementShareScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val loadingDescription = stringResource(R.string.cd_loading)
     val preparingDescription = stringResource(R.string.report_preparing)
-    val title = when (bucket) {
-        ClerkProjectBucket.ACTIVE -> stringResource(R.string.report_clerk_active_share_title)
-        ClerkProjectBucket.HISTORY -> stringResource(R.string.report_clerk_history_share_title)
+    // v1.2 a11y fix: fold the clerk's name into the title (matches ClerkBalanceScreen /
+    // ClerkProfileScreen putting clerk identity in the app bar) instead of a bucket-only title
+    // that reads the same for every clerk. Falls back to the plain title while loading, since
+    // state.clerkName is empty until then.
+    val title = when {
+        !state.isLoaded && bucket == ClerkProjectBucket.ACTIVE -> stringResource(R.string.report_clerk_active_share_title)
+        !state.isLoaded -> stringResource(R.string.report_clerk_history_share_title)
+        bucket == ClerkProjectBucket.ACTIVE ->
+            stringResource(R.string.report_clerk_active_share_title_with_name, state.clerkName)
+        else -> stringResource(R.string.report_clerk_history_share_title_with_name, state.clerkName)
     }
 
     LaunchedEffect(Unit) {
@@ -128,13 +136,6 @@ fun ClerkMultiProjectStatementShareScreen(
                     .padding(CrewTallyTheme.dimens.screenEdge),
                 verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.sectionGap),
             ) {
-                Text(
-                    text = state.clerkName,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.semantics { heading() },
-                )
-
                 CrewTallyReportRangeSelector(
                     preset = state.rangePreset,
                     onPresetChange = { viewModel.onEvent(ClerkMultiProjectStatementShareEvent.RangePresetChanged(it)) },
@@ -144,28 +145,54 @@ fun ClerkMultiProjectStatementShareScreen(
                     onCustomEndChange = { viewModel.onEvent(ClerkMultiProjectStatementShareEvent.CustomEndChanged(it)) },
                 )
 
-                if (state.isRangeInvalid) {
-                    CrewTallyInlineError(text = stringResource(R.string.report_range_invalid))
-                } else if (!state.hasContent) {
-                    Text(
-                        text = emptyMessage(state, bucket),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    StatementPreview(state = state)
+                // v1.2 a11y fix: one live-region container around whichever of the three states
+                // is showing, so a range change that flips content <-> empty message gets
+                // announced (mirrors CrewTallyInlineError's own Polite live region).
+                val emptyMessageText = emptyMessage(state, bucket)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+                ) {
+                    if (state.isRangeInvalid) {
+                        CrewTallyInlineError(text = stringResource(R.string.report_range_invalid))
+                    } else if (!state.hasContent) {
+                        Text(
+                            text = emptyMessageText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        StatementPreview(state = state)
+                    }
                 }
 
+                val shareAsTextLabel = stringResource(R.string.report_share_as_text)
+                val shareAsPdfLabel = stringResource(R.string.report_share_as_pdf)
                 CrewTallyButton(
-                    text = stringResource(R.string.report_share_as_text),
+                    text = shareAsTextLabel,
                     onClick = { viewModel.onEvent(ClerkMultiProjectStatementShareEvent.ShareAsText) },
                     enabled = !state.isGenerating && !state.isRangeInvalid && state.hasContent,
+                    contentDescription = shareButtonDisabledDescription(
+                        label = shareAsTextLabel,
+                        isGenerating = state.isGenerating,
+                        isRangeInvalid = state.isRangeInvalid,
+                        hasContent = state.hasContent,
+                        noContentReasonText = emptyMessageText,
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 CrewTallyButton(
-                    text = stringResource(R.string.report_share_as_pdf),
+                    text = shareAsPdfLabel,
                     onClick = { viewModel.onEvent(ClerkMultiProjectStatementShareEvent.ShareAsPdf) },
                     enabled = !state.isGenerating && !state.isRangeInvalid && state.hasContent,
+                    contentDescription = shareButtonDisabledDescription(
+                        label = shareAsPdfLabel,
+                        isGenerating = state.isGenerating,
+                        isRangeInvalid = state.isRangeInvalid,
+                        hasContent = state.hasContent,
+                        noContentReasonText = emptyMessageText,
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                 )
 

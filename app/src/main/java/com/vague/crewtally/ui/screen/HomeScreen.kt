@@ -331,6 +331,6 @@ private fun OwedClerkListRow(
             },
             modifier = Modifier.weight(1f),
         )
-        CrewTallyClerkProfileButton(clerkName = row.clerkName, onClick = onOpenProfile)
+        CrewTallyClerkProfileButton(clerkName = row.clerkName, projectName = row.projectName, onClick = onOpenProfile)
     }
 }

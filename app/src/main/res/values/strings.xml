@@ -365,6 +365,8 @@
     <string name="profile_share_history_statement">Share history statement</string>
     <string name="report_clerk_active_share_title">Active statement</string>
     <string name="report_clerk_history_share_title">History statement</string>
+    <string name="report_clerk_active_share_title_with_name">Active statement: %1$s</string>
+    <string name="report_clerk_history_share_title_with_name">History statement: %1$s</string>
     <string name="report_clerk_active_statement_title">Active Clerk Statement</string>
     <string name="report_clerk_history_statement_title">History Clerk Statement</string>
     <string name="report_clerk_active_empty">This clerk is not on any active projects yet. Nothing to share.</string>
@@ -376,6 +378,8 @@
         <item quantity="other">%d projects</item>
     </plurals>
     <string name="cd_open_clerk_profile">Open clerk profile for %1$s</string>
+    <string name="cd_open_clerk_profile_for_project">Open clerk profile for %1$s, %2$s</string>
+    <string name="cd_share_button_disabled">%1$s, disabled: %2$s</string>
 
     <!-- Backup (Phase 5) -->
     <string name="backup_screen_title">Backup</string>
