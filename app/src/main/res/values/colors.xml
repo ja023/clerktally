@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Launcher-icon colors only. All in-app color lives in ui/theme/Color.kt. -->
-    <color name="ic_launcher_background">#1F4E79</color>
+    <!--
+      Very light cool neutral, chosen so the brand mark's mid-grey frame (#6F7072) stays
+      legible behind it: 4.5:1 against the grey, 11:1 against the navy (#013B7A). Replaces
+      the v1.0 navy tile, which would have swallowed both of the mark's colors.
+      Not pure white, so the icon keeps a visible surface on white launcher backgrounds.
+    -->
+    <color name="ic_launcher_background">#F2F4F7</color>
     <color name="window_background_light">#FBFBFD</color>
 </resources>

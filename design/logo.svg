@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CrewTally brand mark. Redrawn as clean vector geometry from design/logo-source.jpeg;
+  both fills are sampled from that image (grey #6F7072, navy #013B7A).
+  Square corners only: four grey bars form a frame open at the top-right, and the navy
+  arrow is an L-bracket plus an exact 45 degree shaft ending in an L-shaped arrowhead
+  that points down-left. Mark occupies 60..940 of the 1000 viewBox.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" role="img" aria-label="CrewTally">
+  <g fill="#6F7072">
+    <rect x="60" y="60" width="66" height="880"/>
+    <rect x="60" y="874" width="880" height="66"/>
+    <rect x="60" y="60" width="424" height="66"/>
+    <rect x="874" y="518" width="66" height="422"/>
+  </g>
+  <g fill="#013B7A">
+    <rect x="556" y="60" width="384" height="72"/>
+    <rect x="868" y="60" width="72" height="386"/>
+    <rect x="448" y="187" width="72" height="365"/>
+    <rect x="448" y="480" width="367" height="72"/>
+    <polygon points="503,548 936,115 885,64 452,497"/>
+  </g>
+</svg>
