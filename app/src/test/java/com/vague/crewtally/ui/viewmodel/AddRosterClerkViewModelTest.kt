@@ -11,6 +11,8 @@ import com.vague.crewtally.testutil.FakeRosterEntryDao
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -108,6 +110,24 @@ class AddRosterClerkViewModelTest {
         assertEquals(1, rows.size)
         assertEquals(5000L, rows.single().dailyRate)
         assertTrue(viewModel.state.value.saveComplete)
+    }
+
+    @Test
+    fun `rosterSize reflects the project's current active roster count`() = runTest {
+        rosterEntryDao.seed(
+            RosterEntryEntity(id = "r1", projectId = projectId, clerkId = "clerk-1", dailyRate = 3000),
+            RosterEntryEntity(id = "r2", projectId = projectId, clerkId = "clerk-2", dailyRate = 4000),
+            // Soft-removed row: must not count toward the roster size.
+            RosterEntryEntity(
+                id = "r3", projectId = projectId, clerkId = "clerk-3", dailyRate = 5000, removedAt = 111_000L,
+            ),
+            // Different project: must not leak into this project's count.
+            RosterEntryEntity(id = "r4", projectId = "other-project", clerkId = "clerk-4", dailyRate = 6000),
+        )
+        val job: Job = launch(Dispatchers.Unconfined) { viewModel.rosterSize.collect {} }
+
+        assertEquals(2, viewModel.rosterSize.value)
+        job.cancel()
     }
 
     @Test

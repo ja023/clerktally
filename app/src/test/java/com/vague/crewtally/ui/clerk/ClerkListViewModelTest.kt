@@ -82,6 +82,44 @@ class ClerkListViewModelTest {
     }
 
     @Test
+    fun `active and archived counts reflect the full store, not the search filter`() = runTest {
+        // Arrange
+        val dao = FakeClerkDao().apply { seed(jad, sara, retired) }
+        val viewModel = buildViewModel(dao)
+        val job = launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        // Act: search down to a single match while archived is hidden.
+        viewModel.onEvent(ClerkListEvent.SearchQueryChanged("Sara"))
+        advanceUntilIdle()
+
+        // Assert: counts are the totals (v1.2 LOCKED "12 clerks" / "3 archived" summary),
+        // unaffected by the search box narrowing the visible rows.
+        val state = viewModel.uiState.value
+        assertEquals(1, state.activeClerks.size)
+        assertEquals(2, state.activeCount)
+        assertEquals(1, state.archivedCount)
+        job.cancel()
+    }
+
+    @Test
+    fun `archived count is visible even before the archived section is opened`() = runTest {
+        // Arrange
+        val dao = FakeClerkDao().apply { seed(jad, retired) }
+        val viewModel = buildViewModel(dao)
+        val job = launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        // Act / Assert: showArchived defaults to false, but archivedCount is still computed
+        // so the screen can show "1 archived" the moment the toggle is opened.
+        val state = viewModel.uiState.value
+        assertFalse(state.showArchived)
+        assertEquals(1, state.activeCount)
+        assertEquals(1, state.archivedCount)
+        job.cancel()
+    }
+
+    @Test
     fun `hasAnyClerks is false only when the store is genuinely empty`() = runTest {
         // Arrange
         val dao = FakeClerkDao()

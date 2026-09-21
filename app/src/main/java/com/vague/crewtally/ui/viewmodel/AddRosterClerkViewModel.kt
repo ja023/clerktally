@@ -63,6 +63,11 @@ class AddRosterClerkViewModel(
             .map { rows -> rows.map { it.entry.clerkId }.toSet() }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptySet())
 
+    /** Current roster size for the "8 on roster" count shown on the pick step (v1.2 LOCKED). */
+    val rosterSize: StateFlow<Int> = activeRosterClerkIds
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), 0)
+
     private val allActiveClerks: StateFlow<List<ClerkEntity>> = clerkDao.observeActive()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 

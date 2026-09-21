@@ -70,6 +70,17 @@ fun ProjectsScreen(navController: NavController, modifier: Modifier = Modifier) 
                 )
                 .semantics { heading() },
         )
+        Text(
+            // Active count regardless of which segment is selected (mirrors Home's own
+            // ProjectStatus.ACTIVE definition of "active") — v1.2 LOCKED.
+            text = pluralStringResource(R.plurals.projects_active_count, activeProjects.size, activeProjects.size),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(
+                horizontal = CrewTallyTheme.dimens.screenEdge,
+                vertical = CrewTallyTheme.dimens.spaceXs,
+            ),
+        )
         CrewTallySegmentedControl(
             options = listOf(
                 ProjectSegment.ACTIVE to stringResource(R.string.projects_segment_active),
