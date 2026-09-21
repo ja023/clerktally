@@ -15,4 +15,7 @@ object TextReportRenderer {
 
     fun renderProjectStatement(statement: ProjectStatement, strings: ReportStrings): String =
         ReportLines.forProjectStatement(statement, strings).joinToString("\n")
+
+    fun renderClerkMultiProjectStatement(statement: ClerkMultiProjectStatement, strings: ReportStrings): String =
+        ReportLines.forClerkMultiProjectStatement(statement, strings).joinToString("\n")
 }

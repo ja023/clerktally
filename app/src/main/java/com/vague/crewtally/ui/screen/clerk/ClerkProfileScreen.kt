@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -34,9 +35,12 @@ import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.balance.CurrencyTotal
+import com.vague.crewtally.report.ClerkProjectBucket
 import com.vague.crewtally.ui.components.CrewTallyCurrencyTotalCard
 import com.vague.crewtally.ui.components.CrewTallyListRow
+import com.vague.crewtally.ui.components.CrewTallyOutlinedButton
 import com.vague.crewtally.ui.screen.money.MoneyRoutes
+import com.vague.crewtally.ui.screen.report.ReportRoutes
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.theme.CrewTallyType
 import com.vague.crewtally.ui.util.owedDisplayText
@@ -119,6 +123,35 @@ fun ClerkProfileScreen(
                             modifier = Modifier.semantics { heading() },
                         )
                         state.currencyTotals.forEach { total -> CurrencyTotalCard(total = total) }
+                    }
+
+                    // The two cross-project statements (LOCKED v1.2). They live here, between
+                    // the totals they summarise and the per-project rows they expand on, and
+                    // only when the clerk actually has history — an empty profile has nothing
+                    // to state.
+                    Column(verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceMd)) {
+                        CrewTallyOutlinedButton(
+                            text = stringResource(R.string.profile_share_active_statement),
+                            onClick = {
+                                navController.navigate(
+                                    ReportRoutes.clerkBucketStatement(clerkId, ClerkProjectBucket.ACTIVE),
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = CrewTallyTheme.dimens.primaryTarget),
+                        )
+                        CrewTallyOutlinedButton(
+                            text = stringResource(R.string.profile_share_history_statement),
+                            onClick = {
+                                navController.navigate(
+                                    ReportRoutes.clerkBucketStatement(clerkId, ClerkProjectBucket.HISTORY),
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = CrewTallyTheme.dimens.primaryTarget),
+                        )
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceMd)) {

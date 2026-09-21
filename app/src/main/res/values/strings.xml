@@ -301,7 +301,7 @@
     <string name="profile_project_row_description">%1$s. %2$s.</string>
 
     <!-- Reports (Phase 5) -->
-    <string name="report_share_statement">Share statement</string>
+    <string name="report_share_project_statement">Share this project\'s statement</string>
     <string name="report_share_company">Share company report</string>
     <string name="report_clerk_share_title">Statement</string>
     <string name="report_company_share_title">Company statement</string>
@@ -359,6 +359,23 @@
     <string name="report_range_from">From</string>
     <string name="report_range_to">To</string>
     <string name="report_range_invalid">The From date is after the To date. Fix the range to build the statement.</string>
+
+    <!-- Cross-project clerk statements (v1.2) -->
+    <string name="profile_share_active_statement">Share active statement</string>
+    <string name="profile_share_history_statement">Share history statement</string>
+    <string name="report_clerk_active_share_title">Active statement</string>
+    <string name="report_clerk_history_share_title">History statement</string>
+    <string name="report_clerk_active_statement_title">Active Clerk Statement</string>
+    <string name="report_clerk_history_statement_title">History Clerk Statement</string>
+    <string name="report_clerk_active_empty">This clerk is not on any active projects yet. Nothing to share.</string>
+    <string name="report_clerk_history_empty">This clerk has no completed or archived projects yet. Nothing to share.</string>
+    <string name="report_clerk_range_empty">No activity in the selected date range. Nothing to share.</string>
+    <string name="report_projects_count_label">Projects</string>
+    <plurals name="report_project_count">
+        <item quantity="one">%d project</item>
+        <item quantity="other">%d projects</item>
+    </plurals>
+    <string name="cd_open_clerk_profile">Open clerk profile for %1$s</string>
 
     <!-- Backup (Phase 5) -->
     <string name="backup_screen_title">Backup</string>

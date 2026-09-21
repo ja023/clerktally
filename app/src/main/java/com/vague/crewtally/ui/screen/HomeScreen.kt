@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -30,6 +31,7 @@ import com.vague.crewtally.R
 import com.vague.crewtally.balance.OutstandingTotal
 import com.vague.crewtally.data.local.ProjectSummary
 import com.vague.crewtally.ui.components.CrewTallyButton
+import com.vague.crewtally.ui.components.CrewTallyClerkProfileButton
 import com.vague.crewtally.ui.components.CrewTallyEmptyState
 import com.vague.crewtally.ui.components.CrewTallyListRow
 import com.vague.crewtally.ui.screen.attendance.AttendanceRoutes
@@ -153,6 +155,7 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
                         OwedClerkListRow(
                             row = row,
                             onClick = { navController.navigate(MoneyRoutes.balance(row.projectId, row.clerkId)) },
+                            onOpenProfile = { navController.navigate(MoneyRoutes.profile(row.clerkId)) },
                         )
                     }
                 }
@@ -281,26 +284,43 @@ private fun OutstandingCard(total: OutstandingTotal, modifier: Modifier = Modifi
     }
 }
 
+/**
+ * One owed-clerk row. The row itself still opens that clerk's per-project balance (tap target
+ * unchanged — LOCKED v1.2); the trailing document button beside it opens the clerk profile,
+ * where the two cross-project statements live.
+ */
 @Composable
-private fun OwedClerkListRow(row: OwedClerkRow, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun OwedClerkListRow(
+    row: OwedClerkRow,
+    onClick: () -> Unit,
+    onOpenProfile: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val amountText = Money.formatWithSymbol(row.owed, CurrencyCodes.symbolFor(row.currency))
-    CrewTallyListRow(
-        title = row.clerkName,
-        subtitle = row.projectName,
-        onClick = onClick,
-        contentDescription = stringResource(
-            R.string.home_owed_row_description,
-            row.clerkName,
-            row.projectName,
-            amountText,
-        ),
-        trailing = {
-            Text(
-                text = amountText,
-                style = CrewTallyType.moneyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        },
-        modifier = modifier,
-    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceSm),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        CrewTallyListRow(
+            title = row.clerkName,
+            subtitle = row.projectName,
+            onClick = onClick,
+            contentDescription = stringResource(
+                R.string.home_owed_row_description,
+                row.clerkName,
+                row.projectName,
+                amountText,
+            ),
+            trailing = {
+                Text(
+                    text = amountText,
+                    style = CrewTallyType.moneyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            },
+            modifier = Modifier.weight(1f),
+        )
+        CrewTallyClerkProfileButton(clerkName = row.clerkName, onClick = onOpenProfile)
+    }
 }
