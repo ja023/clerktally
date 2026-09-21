@@ -24,6 +24,18 @@ class ReportFileNamesTest {
     }
 
     @Test
+    fun `the two cross-project clerk statements get distinct, bucket-tagged file names`() {
+        assertEquals(
+            "Ali-Hassan-active-statement.pdf",
+            ReportFileNames.clerkBucketStatementFileName("Ali Hassan", ClerkProjectBucket.ACTIVE, "pdf"),
+        )
+        assertEquals(
+            "Ali-Hassan-history-statement.txt",
+            ReportFileNames.clerkBucketStatementFileName("Ali Hassan", ClerkProjectBucket.HISTORY, "txt"),
+        )
+    }
+
+    @Test
     fun `sanitizing collapses runs of unsafe characters into a single dash`() {
         assertEquals("A-B-statement.txt", ReportFileNames.clerkStatementFileName("A & B!!", "txt"))
     }

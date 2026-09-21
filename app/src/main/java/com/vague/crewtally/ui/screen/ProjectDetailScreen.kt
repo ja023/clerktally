@@ -136,6 +136,11 @@ fun ProjectDetailScreen(projectId: String, navController: NavController, modifie
                         // Rate editing moved onto that balance screen as a secondary action.
                         navController.navigate(MoneyRoutes.balance(projectId, row.entry.clerkId))
                     },
+                    onOpenClerkProfile = { row ->
+                        // v1.2: the trailing document button opens the clerk profile, where the
+                        // two cross-project statements live.
+                        navController.navigate(MoneyRoutes.profile(row.entry.clerkId))
+                    },
                 )
 
                 Spacer(Modifier.height(CrewTallyTheme.dimens.sectionGap))

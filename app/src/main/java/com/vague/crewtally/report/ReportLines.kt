@@ -31,20 +31,39 @@ object ReportLines {
         lines += summaryLine(statement, strings, symbol)
         lines += ""
 
-        lines += "${strings.daysWorkedLabel} (${statement.presentDayCount})"
+        lines += ledgerBodyLines(statement, strings, symbol, indent = "")
+
+        return lines
+    }
+
+    /**
+     * The day / extras / payments ledger and its earned-paid-owed footer for ONE clerk on ONE
+     * project — shared verbatim by the per-project clerk statement (at [indent] "") and by every
+     * project section of the v1.2 cross-project statement (indented one level under its project
+     * heading), so the two documents can never phrase the same ledger differently.
+     */
+    private fun ledgerBodyLines(
+        statement: ClerkStatement,
+        strings: ReportStrings,
+        symbol: String,
+        indent: String,
+    ): List<String> {
+        val lines = mutableListOf<String>()
+
+        lines += "$indent${strings.daysWorkedLabel} (${statement.presentDayCount})"
         if (statement.dayLines.isEmpty()) {
-            lines += " ${strings.noneRecordedLabel}"
+            lines += "$indent ${strings.noneRecordedLabel}"
         } else {
             statement.dayLines.forEach { day ->
                 val state = if (day.present) strings.presentLabel else strings.absentLabel
-                lines += " ${DATE_FORMAT.format(day.date)}  $state  ${Money.formatWithSymbol(day.rateSnapshot, symbol)}"
+                lines += "$indent ${DATE_FORMAT.format(day.date)}  $state  ${Money.formatWithSymbol(day.rateSnapshot, symbol)}"
             }
         }
         lines += ""
 
-        lines += strings.extrasLabel
+        lines += "$indent${strings.extrasLabel}"
         if (statement.extraLines.isEmpty()) {
-            lines += " ${strings.noneRecordedLabel}"
+            lines += "$indent ${strings.noneRecordedLabel}"
         } else {
             statement.extraLines.forEach { extra ->
                 val amountText = if (extra.amount < 0) {
@@ -52,29 +71,80 @@ object ReportLines {
                 } else {
                     Money.formatWithSymbol(extra.amount, symbol)
                 }
-                lines += " ${DATE_FORMAT.format(extra.date)}  ${extra.label}  $amountText"
+                lines += "$indent ${DATE_FORMAT.format(extra.date)}  ${extra.label}  $amountText"
             }
-            lines += " ${strings.extrasLabel}: ${Money.formatSignedWithSymbol(statement.extras, symbol)}"
+            lines += "$indent ${strings.extrasLabel}: ${Money.formatSignedWithSymbol(statement.extras, symbol)}"
         }
         lines += ""
 
-        lines += strings.paymentsLabel
+        lines += "$indent${strings.paymentsLabel}"
         if (statement.paymentLines.isEmpty()) {
-            lines += " ${strings.noneRecordedLabel}"
+            lines += "$indent ${strings.noneRecordedLabel}"
         } else {
             statement.paymentLines.forEach { payment ->
                 val notePart = payment.note.ifBlank { null }
-                lines += " ${DATE_FORMAT.format(payment.date)}  ${Money.formatWithSymbol(payment.amount, symbol)}" +
+                lines += "$indent ${DATE_FORMAT.format(payment.date)}  ${Money.formatWithSymbol(payment.amount, symbol)}" +
                     (notePart?.let { "  $it" } ?: "")
             }
         }
         lines += ""
 
-        lines += "${strings.earnedLabel}: ${Money.formatSignedWithSymbol(statement.earned + statement.extras, symbol)}"
-        lines += "${strings.paidLabel}: ${Money.formatWithSymbol(statement.paid, symbol)}"
-        lines += "${strings.owedLabel}: ${owedPhrase(statement.owed, symbol, strings)}"
+        lines += "$indent${strings.earnedLabel}: ${Money.formatSignedWithSymbol(statement.earned + statement.extras, symbol)}"
+        lines += "$indent${strings.paidLabel}: ${Money.formatWithSymbol(statement.paid, symbol)}"
+        lines += "$indent${strings.owedLabel}: ${owedPhrase(statement.owed, symbol, strings)}"
 
         return lines
+    }
+
+    /**
+     * A cross-project clerk statement (NEW v1.2): the app name + bucket title, the clerk's name
+     * (kept on its own line so the PDF's repeated two-line header names WHO the document is for
+     * on every page), the covered range, then one section per project and grand totals per
+     * currency. Cross-currency amounts are never summed (LOCKED).
+     */
+    fun forClerkMultiProjectStatement(statement: ClerkMultiProjectStatement, strings: ReportStrings): List<String> {
+        val lines = mutableListOf<String>()
+
+        lines += "${strings.appName} - ${bucketTitle(statement.bucket, strings)}"
+        lines += statement.clerkName
+        lines += rangeText(statement.range, strings)
+        lines += ""
+
+        if (statement.sections.isEmpty()) {
+            lines += strings.noneRecordedLabel
+            lines += ""
+        } else {
+            statement.sections.forEach { section ->
+                val projectStatement = section.statement
+                val symbol = symbolFor(projectStatement.currency)
+                lines += "${strings.projectLabel}: ${projectStatement.projectName} (${projectStatement.currency})"
+                if (projectStatement.companyName.isNotBlank()) {
+                    lines += " ${projectStatement.companyName}"
+                }
+                lines += ledgerBodyLines(projectStatement, strings, symbol, indent = " ")
+                lines += ""
+            }
+        }
+
+        lines += strings.grandTotalLabel
+        if (statement.grandTotalsByCurrency.isEmpty()) {
+            lines += " ${strings.noneRecordedLabel}"
+        } else {
+            statement.grandTotalsByCurrency.forEach { total ->
+                val symbol = symbolFor(total.currency)
+                lines += " ${total.currency}: ${strings.earnedLabel.lowercase(Locale.ROOT)} " +
+                    "${Money.formatSignedWithSymbol(total.earned + total.extras, symbol)}, " +
+                    "${strings.paidLabel.lowercase(Locale.ROOT)} ${Money.formatWithSymbol(total.paid, symbol)}, " +
+                    owedPhrase(total.owed, symbol, strings)
+            }
+        }
+
+        return lines
+    }
+
+    private fun bucketTitle(bucket: ClerkProjectBucket, strings: ReportStrings): String = when (bucket) {
+        ClerkProjectBucket.ACTIVE -> strings.clerkActiveStatementTitle
+        ClerkProjectBucket.HISTORY -> strings.clerkHistoryStatementTitle
     }
 
     fun forCompanyTotals(totals: CompanyTotals, strings: ReportStrings): List<String> {

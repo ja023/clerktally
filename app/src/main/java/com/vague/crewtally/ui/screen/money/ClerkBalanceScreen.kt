@@ -41,6 +41,7 @@ import androidx.navigation.NavController
 import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.ui.components.CrewTallyButton
+import com.vague.crewtally.ui.components.CrewTallyOutlinedButton
 import com.vague.crewtally.ui.screen.report.ReportRoutes
 import com.vague.crewtally.ui.theme.CrewTallyShape
 import com.vague.crewtally.ui.theme.CrewTallyTheme
@@ -118,12 +119,14 @@ fun ClerkBalanceScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                TextButton(
+                // v1.2: an outlined button, and labelled "this project's" — the clerk profile
+                // now also offers two CROSS-project statements, so the per-project one has to
+                // say which scope it covers.
+                CrewTallyOutlinedButton(
+                    text = stringResource(R.string.report_share_project_statement),
                     onClick = { navController.navigate(ReportRoutes.clerkStatement(projectId, clerkId)) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = CrewTallyTheme.dimens.minTarget),
-                ) {
-                    Text(text = stringResource(R.string.report_share_statement), style = MaterialTheme.typography.labelLarge)
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
                 DaysWorkedSection(
                     presentDays = state.presentDays,

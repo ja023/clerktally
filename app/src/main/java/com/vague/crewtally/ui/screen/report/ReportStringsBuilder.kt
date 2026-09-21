@@ -39,4 +39,6 @@ fun buildReportStrings(): ReportStrings = ReportStrings(
     allTimeLabel = stringResource(R.string.report_range_all_time),
     dayActivityLabel = stringResource(R.string.report_day_activity_label),
     paymentArrowTemplate = stringResource(R.string.report_payment_arrow_template),
+    clerkActiveStatementTitle = stringResource(R.string.report_clerk_active_statement_title),
+    clerkHistoryStatementTitle = stringResource(R.string.report_clerk_history_statement_title),
 )

@@ -4,6 +4,7 @@ import com.vague.crewtally.data.local.AttendanceEntryEntity
 import com.vague.crewtally.data.local.ExtraPayLineEntity
 import com.vague.crewtally.data.local.ExtraPayLineWithDate
 import com.vague.crewtally.data.local.PaymentEntity
+import com.vague.crewtally.data.local.ProjectStatus
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -267,6 +268,113 @@ class ReportLinesTest {
 
         assertTrue(lines.any { it.contains(strings.noneRecordedLabel) })
     }
+
+    // --- v1.2: cross-project clerk statements ------------------------------------------------
+
+    private fun clerkProject(
+        id: String,
+        name: String,
+        status: ProjectStatus,
+        currency: String = "USD",
+    ) = ClerkProjectLedgerInput(
+        projectId = id,
+        projectName = name,
+        companyName = "Acme",
+        currency = currency,
+        status = status,
+        attendance = listOf(AttendanceEntryEntity("a-$id", id, "c1", jan1, present = true, rateSnapshot = 5000)),
+        payments = listOf(PaymentEntity("pay-$id", id, "c1", jan10, 2000, "")),
+    )
+
+    @Test
+    fun `cross-project clerk statement leads with the bucket title and the clerk name`() {
+        val statement = ClerkMultiProjectStatementBuilder.build(
+            "Ali",
+            ClerkProjectBucket.ACTIVE,
+            listOf(clerkProject("p1", "Warehouse Count", ProjectStatus.ACTIVE)),
+        )
+
+        val lines = ReportLines.forClerkMultiProjectStatement(statement, strings)
+
+        assertEquals("CrewTally - Active Clerk Statement", lines[0])
+        assertEquals("Ali", lines[1])
+        assertEquals(strings.allTimeLabel, lines[2])
+    }
+
+    @Test
+    fun `the history bucket renders its own title`() {
+        val statement = ClerkMultiProjectStatementBuilder.build(
+            "Ali",
+            ClerkProjectBucket.HISTORY,
+            listOf(clerkProject("p1", "Old Count", ProjectStatus.COMPLETED)),
+        )
+
+        val lines = ReportLines.forClerkMultiProjectStatement(statement, strings)
+
+        assertEquals("CrewTally - History Clerk Statement", lines[0])
+    }
+
+    @Test
+    fun `each project section names the project, its currency, company and its own totals`() {
+        val statement = ClerkMultiProjectStatementBuilder.build(
+            "Ali",
+            ClerkProjectBucket.ACTIVE,
+            listOf(clerkProject("p1", "Warehouse Count", ProjectStatus.ACTIVE)),
+        )
+
+        val lines = ReportLines.forClerkMultiProjectStatement(statement, strings)
+
+        assertTrue(lines.any { it == "${strings.projectLabel}: Warehouse Count (USD)" })
+        assertTrue(lines.any { it == " Acme" })
+        assertTrue(lines.any { it == " ${strings.daysWorkedLabel} (1)" })
+        assertTrue(lines.any { it == " ${strings.earnedLabel}: $50.00" })
+        assertTrue(lines.any { it == " ${strings.paidLabel}: $20.00" })
+        assertTrue(lines.any { it == " ${strings.owedLabel}: $30.00 owed" })
+    }
+
+    @Test
+    fun `grand totals list one line per currency and never a combined figure`() {
+        val statement = ClerkMultiProjectStatementBuilder.build(
+            "Ali",
+            ClerkProjectBucket.ACTIVE,
+            listOf(
+                clerkProject("p1", "Dollars", ProjectStatus.ACTIVE, currency = "USD"),
+                clerkProject("p2", "Euros", ProjectStatus.ACTIVE, currency = "EUR"),
+            ),
+        )
+
+        val lines = ReportLines.forClerkMultiProjectStatement(statement, strings)
+        val totalLines = lines.dropWhile { it != strings.grandTotalLabel }.drop(1)
+
+        assertEquals(2, totalLines.size)
+        assertTrue(totalLines.any { it.startsWith(" EUR: ") })
+        assertTrue(totalLines.any { it.startsWith(" USD: ") })
+    }
+
+    @Test
+    fun `an empty bucket still renders a complete document stating nothing was recorded`() {
+        val statement = ClerkMultiProjectStatementBuilder.build("Ali", ClerkProjectBucket.ACTIVE, emptyList())
+
+        val lines = ReportLines.forClerkMultiProjectStatement(statement, strings)
+
+        assertEquals("Ali", lines[1])
+        assertTrue(lines.any { it == strings.noneRecordedLabel })
+        assertTrue(lines.any { it == strings.grandTotalLabel })
+        assertEquals(" ${strings.noneRecordedLabel}", lines.last())
+    }
+
+    @Test
+    fun `no generated line uses an em dash`() {
+        val statement = ClerkMultiProjectStatementBuilder.build(
+            "Ali",
+            ClerkProjectBucket.ACTIVE,
+            listOf(clerkProject("p1", "Warehouse Count", ProjectStatus.ACTIVE)),
+        )
+
+        val lines = ReportLines.forClerkMultiProjectStatement(statement, strings)
+
+        assertTrue(lines.none { it.contains('—') || it.contains('–') })
+    }
 }
 
 /** A hand-built English [ReportStrings] mirroring `strings.xml`, for assertions without Android resources. */
@@ -298,4 +406,6 @@ fun testReportStrings(): ReportStrings = ReportStrings(
     allTimeLabel = "All time",
     dayActivityLabel = "day",
     paymentArrowTemplate = "Payment -> %1\$s",
+    clerkActiveStatementTitle = "Active Clerk Statement",
+    clerkHistoryStatementTitle = "History Clerk Statement",
 )

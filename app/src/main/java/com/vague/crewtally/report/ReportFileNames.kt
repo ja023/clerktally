@@ -22,6 +22,19 @@ object ReportFileNames {
     fun clerkStatementFileName(clerkName: String, extension: String): String =
         "${sanitize(clerkName)}-statement.$extension"
 
+    /**
+     * The v1.2 cross-project clerk statements, e.g. `Ali-Hassan-active-statement.pdf` — the
+     * bucket is part of the name so a clerk's two documents never overwrite one another in the
+     * share cache or in whatever folder the user saves them to.
+     */
+    fun clerkBucketStatementFileName(clerkName: String, bucket: ClerkProjectBucket, extension: String): String {
+        val bucketSegment = when (bucket) {
+            ClerkProjectBucket.ACTIVE -> "active"
+            ClerkProjectBucket.HISTORY -> "history"
+        }
+        return "${sanitize(clerkName)}-$bucketSegment-statement.$extension"
+    }
+
     fun companyReportFileName(companyName: String, extension: String): String =
         "${sanitize(companyName)}-report.$extension"
 

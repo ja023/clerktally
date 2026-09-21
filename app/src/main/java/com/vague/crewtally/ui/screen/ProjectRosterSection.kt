@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import com.vague.crewtally.R
 import com.vague.crewtally.data.local.RosterRowSummary
+import com.vague.crewtally.ui.components.CrewTallyClerkProfileButton
 import com.vague.crewtally.ui.components.CrewTallyListRow
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 import com.vague.crewtally.ui.theme.CrewTallyType
@@ -38,6 +39,7 @@ fun ProjectRosterSection(
     currencySymbol: String,
     onAddClerk: () -> Unit,
     onRowClick: (RosterRowSummary) -> Unit,
+    onOpenClerkProfile: (RosterRowSummary) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -72,18 +74,31 @@ fun ProjectRosterSection(
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceMd)) {
                 roster.forEach { row ->
-                    CrewTallyListRow(
-                        title = row.clerkName,
-                        onClick = { onRowClick(row) },
-                        contentDescription = "${row.clerkName}. ${Money.formatWithSymbol(row.entry.dailyRate, currencySymbol)}",
-                        trailing = {
-                            Text(
-                                text = Money.formatWithSymbol(row.entry.dailyRate, currencySymbol),
-                                style = CrewTallyType.moneySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        },
-                    )
+                    // The row itself still opens the balance screen (tap target unchanged —
+                    // LOCKED v1.2); the document button beside it opens the clerk profile.
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceSm),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        CrewTallyListRow(
+                            title = row.clerkName,
+                            onClick = { onRowClick(row) },
+                            contentDescription = "${row.clerkName}. ${Money.formatWithSymbol(row.entry.dailyRate, currencySymbol)}",
+                            trailing = {
+                                Text(
+                                    text = Money.formatWithSymbol(row.entry.dailyRate, currencySymbol),
+                                    style = CrewTallyType.moneySmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        CrewTallyClerkProfileButton(
+                            clerkName = row.clerkName,
+                            onClick = { onOpenClerkProfile(row) },
+                        )
+                    }
                 }
             }
         }

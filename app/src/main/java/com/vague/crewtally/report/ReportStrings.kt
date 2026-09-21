@@ -52,4 +52,9 @@ data class ReportStrings(
     val dayActivityLabel: String,
     /** Raw `%1$s` template for a payment activity line, e.g. "Payment -> %1$s". */
     val paymentArrowTemplate: String,
+    // --- v1.2: cross-project clerk statements ----------------------------------------------
+    /** Document title of the ACTIVE-bucket cross-project clerk statement. */
+    val clerkActiveStatementTitle: String,
+    /** Document title of the HISTORY-bucket cross-project clerk statement. */
+    val clerkHistoryStatementTitle: String,
 )

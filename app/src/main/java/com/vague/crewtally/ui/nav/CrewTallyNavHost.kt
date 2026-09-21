@@ -23,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.vague.crewtally.report.ClerkProjectBucket
 import com.vague.crewtally.ui.screen.AddRosterClerkScreen
 import com.vague.crewtally.ui.screen.CreateProjectScreen
 import com.vague.crewtally.ui.screen.EditProjectScreen
@@ -44,6 +45,7 @@ import com.vague.crewtally.ui.screen.company.CompanyListScreen
 import com.vague.crewtally.ui.screen.money.ClerkBalanceScreen
 import com.vague.crewtally.ui.screen.money.MoneyRoutes
 import com.vague.crewtally.ui.screen.money.PaymentFormScreen
+import com.vague.crewtally.ui.screen.report.ClerkMultiProjectStatementShareScreen
 import com.vague.crewtally.ui.screen.report.ClerkStatementShareScreen
 import com.vague.crewtally.ui.screen.report.CompanyReportShareScreen
 import com.vague.crewtally.ui.screen.report.CompanyStatementPickerScreen
@@ -423,6 +425,28 @@ fun CrewTallyNavHost() {
             ) { backStackEntry ->
                 ProjectStatementShareScreen(
                     projectId = backStackEntry.arguments?.getString(ReportRoutes.PROJECT_ID).orEmpty(),
+                    navController = navController,
+                )
+            }
+
+            // --- v1.2: cross-project clerk statements (Active / History) ---------------
+            composable(
+                route = ReportRoutes.CLERK_ACTIVE_STATEMENT_TEMPLATE,
+                arguments = listOf(navArgument(ReportRoutes.CLERK_ID) { type = NavType.StringType }),
+            ) { backStackEntry ->
+                ClerkMultiProjectStatementShareScreen(
+                    clerkId = backStackEntry.arguments?.getString(ReportRoutes.CLERK_ID).orEmpty(),
+                    bucket = ClerkProjectBucket.ACTIVE,
+                    navController = navController,
+                )
+            }
+            composable(
+                route = ReportRoutes.CLERK_HISTORY_STATEMENT_TEMPLATE,
+                arguments = listOf(navArgument(ReportRoutes.CLERK_ID) { type = NavType.StringType }),
+            ) { backStackEntry ->
+                ClerkMultiProjectStatementShareScreen(
+                    clerkId = backStackEntry.arguments?.getString(ReportRoutes.CLERK_ID).orEmpty(),
+                    bucket = ClerkProjectBucket.HISTORY,
                     navController = navController,
                 )
             }
