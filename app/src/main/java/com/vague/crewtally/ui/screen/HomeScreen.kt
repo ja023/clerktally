@@ -30,6 +30,7 @@ import com.vague.crewtally.CrewTallyApplication
 import com.vague.crewtally.R
 import com.vague.crewtally.balance.OutstandingTotal
 import com.vague.crewtally.data.local.ProjectSummary
+import com.vague.crewtally.ui.components.CrewTallyBrandMark
 import com.vague.crewtally.ui.components.CrewTallyButton
 import com.vague.crewtally.ui.components.CrewTallyClerkProfileButton
 import com.vague.crewtally.ui.components.CrewTallyEmptyState
@@ -69,14 +70,23 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
     val loadingDescription = stringResource(R.string.cd_loading)
 
     Column(modifier = modifier.fillMaxSize()) {
-        Text(
-            text = stringResource(R.string.nav_home),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+        // The brand mark sits beside the app name (LOCKED v1.2 "Home tab header"). The heading
+        // semantics live on the Row so TalkBack announces one heading, "CrewTally", rather than
+        // a decorative image followed by a separate text node.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceSm),
             modifier = Modifier
                 .padding(horizontal = CrewTallyTheme.dimens.screenEdge, vertical = CrewTallyTheme.dimens.spaceLg)
-                .semantics { heading() },
-        )
+                .semantics(mergeDescendants = true) { heading() },
+        ) {
+            CrewTallyBrandMark()
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        }
 
         // Gate on the first Room emission so the empty-state copy can't flash before real data
         // arrives (mirrors the balance and profile screens' isLoaded gating).

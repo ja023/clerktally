@@ -2,6 +2,7 @@ package com.vague.crewtally.ui.screen.report
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -15,12 +16,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.navigation.NavController
 import com.vague.crewtally.R
+import com.vague.crewtally.ui.components.CrewTallyBrandMark
 import com.vague.crewtally.ui.components.CrewTallyListRow
 import com.vague.crewtally.ui.theme.CrewTallyTheme
 
@@ -41,7 +44,19 @@ fun ReportsHubScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.reports_hub_title), modifier = Modifier.semantics { heading() }) },
+                title = {
+                    // The brand mark heads the reports surface (LOCKED v1.2), matching the mark
+                    // printed at the top of every PDF statement reached from here. Decorative:
+                    // the title text beside it already names the screen.
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(CrewTallyTheme.dimens.spaceSm),
+                        modifier = Modifier.semantics(mergeDescendants = true) { heading() },
+                    ) {
+                        CrewTallyBrandMark()
+                        Text(stringResource(R.string.reports_hub_title))
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
