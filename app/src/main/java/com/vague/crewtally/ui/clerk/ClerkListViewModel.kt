@@ -33,6 +33,12 @@ data class ClerkListUiState(
      *  nothing" (a smaller inline hint). */
     val hasAnyClerks: Boolean = false,
     val isLoading: Boolean = true,
+    /** Total active/archived clerk counts for the "12 clerks" / "3 archived" summary under the
+     *  screen title (v1.2 LOCKED). Deliberately NOT filtered by [searchQuery] — this is a
+     *  standing "how many clerks do you have" fact, not a "how many matched" count, so it
+     *  doesn't flicker while the user types in the search box. */
+    val activeCount: Int = 0,
+    val archivedCount: Int = 0,
 )
 
 sealed interface ClerkListEvent {
@@ -64,6 +70,8 @@ class ClerkListViewModel(private val clerkDao: ClerkDao) : ViewModel() {
             showArchived = isShowingArchived,
             hasAnyClerks = clerks.isNotEmpty(),
             isLoading = false,
+            activeCount = rows.count { !it.isArchived },
+            archivedCount = rows.count { it.isArchived },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ClerkListUiState())
 

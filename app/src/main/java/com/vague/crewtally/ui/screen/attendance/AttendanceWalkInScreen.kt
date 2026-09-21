@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -79,6 +80,7 @@ fun AttendanceWalkInScreen(
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
     val availableClerks by viewModel.availableClerks.collectAsStateWithLifecycle()
+    val rosterSize by viewModel.rosterSize.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.saveComplete) {
         if (state.saveComplete) navController.popBackStack()
@@ -123,6 +125,7 @@ fun AttendanceWalkInScreen(
             AttendanceWalkInStep.PICK -> PickWalkInStep(
                 searchQuery = state.searchQuery,
                 availableClerks = availableClerks,
+                rosterSize = rosterSize,
                 onSearchChanged = { viewModel.onEvent(AttendanceWalkInEvent.SearchChanged(it)) },
                 onClerkPicked = { id, name -> viewModel.onEvent(AttendanceWalkInEvent.ClerkPicked(id, name)) },
                 modifier = Modifier.padding(padding),
@@ -174,11 +177,21 @@ fun AttendanceWalkInScreen(
 private fun PickWalkInStep(
     searchQuery: String,
     availableClerks: List<ClerkEntity>,
+    rosterSize: Int,
     onSearchChanged: (String) -> Unit,
     onClerkPicked: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxSize()) {
+        Text(
+            text = pluralStringResource(R.plurals.roster_picker_count, rosterSize, rosterSize),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(
+                horizontal = CrewTallyTheme.dimens.screenEdge,
+                vertical = CrewTallyTheme.dimens.spaceMd,
+            ),
+        )
         CrewTallyTextField(
             label = stringResource(R.string.roster_search_label),
             value = searchQuery,

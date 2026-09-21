@@ -47,7 +47,7 @@ fun ProjectRosterSection(
             modifier = Modifier.fillMaxWidth().padding(bottom = CrewTallyTheme.dimens.spaceSm),
         ) {
             Text(
-                text = stringResource(R.string.project_roster_heading),
+                text = stringResource(R.string.project_roster_heading, roster.size),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.semantics { heading() },

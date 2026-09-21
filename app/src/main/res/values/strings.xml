@@ -50,6 +50,17 @@
     <string name="clerks_no_matches">No clerks match your search.</string>
     <string name="clerks_archived_section">Archived clerks</string>
 
+    <!-- Clerk numbering + counts (v1.2) -->
+    <string name="clerks_numbered_row">%1$d. %2$s</string>
+    <plurals name="clerks_active_count">
+        <item quantity="one">%d clerk</item>
+        <item quantity="other">%d clerks</item>
+    </plurals>
+    <plurals name="clerks_archived_count">
+        <item quantity="one">%d archived</item>
+        <item quantity="other">%d archived</item>
+    </plurals>
+
     <!-- Clerk form -->
     <string name="clerk_form_title_new">New clerk</string>
     <string name="clerk_form_title_edit">Edit clerk</string>
@@ -92,6 +103,12 @@
     <plurals name="roster_size">
         <item quantity="one">%d crew member</item>
         <item quantity="other">%d crew members</item>
+    </plurals>
+
+    <!-- Projects tab count (v1.2) -->
+    <plurals name="projects_active_count">
+        <item quantity="one">%d project</item>
+        <item quantity="other">%d projects</item>
     </plurals>
 
     <!-- Create-project wizard (Phase 2) -->
@@ -140,12 +157,18 @@
     <string name="edit_project_title">Edit project</string>
 
     <!-- Roster management (Phase 2) -->
-    <string name="project_roster_heading">Roster</string>
+    <string name="project_roster_heading">Roster (%1$d)</string>
     <string name="project_roster_add_clerk">Add clerk</string>
     <string name="project_roster_empty">No one on the roster yet. Add a clerk to get started.</string>
     <string name="add_clerk_pick_title">Add clerk</string>
     <string name="add_clerk_rate_title">Set daily rate</string>
     <string name="add_clerk_none_available">Every active clerk is already on this roster.</string>
+
+    <!-- Roster picker current-size count, shown on add-to-roster + walk-in pickers (v1.2) -->
+    <plurals name="roster_picker_count">
+        <item quantity="one">%d on roster</item>
+        <item quantity="other">%d on roster</item>
+    </plurals>
     <string name="roster_rate_field_label">Daily rate</string>
     <string name="roster_rate_field_label_for_clerk">Daily rate - %1$s</string>
     <string name="roster_rate_edit_hint">Changing this only affects future attendance days. Past days keep the rate they were recorded at.</string>

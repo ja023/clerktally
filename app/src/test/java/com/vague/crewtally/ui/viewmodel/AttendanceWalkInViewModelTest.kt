@@ -89,6 +89,16 @@ class AttendanceWalkInViewModelTest {
         launch(Dispatchers.Unconfined) { viewModel.availableClerks.collect {} }
 
     @Test
+    fun `rosterSize reflects the project's current active roster count, not the day's list`() = runTest {
+        // setUp already seeds one active roster row (clerk-a) and one day-only attendance
+        // row (clerk-b, not on the roster) - rosterSize must count only the former.
+        val job = launch(Dispatchers.Unconfined) { viewModel.rosterSize.collect {} }
+
+        assertEquals(1, viewModel.rosterSize.value)
+        job.cancel()
+    }
+
+    @Test
     fun `pick list excludes roster clerks and clerks already on the day`() = runTest {
         val job = keepAvailableHot()
 

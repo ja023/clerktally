@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -73,6 +74,31 @@ fun ClerkListScreen(
                 .semantics { heading() },
         )
 
+        val activeCountText = pluralStringResource(
+            R.plurals.clerks_active_count,
+            uiState.activeCount,
+            uiState.activeCount,
+        )
+        val countsText = if (uiState.showArchived) {
+            val archivedCountText = pluralStringResource(
+                R.plurals.clerks_archived_count,
+                uiState.archivedCount,
+                uiState.archivedCount,
+            )
+            "$activeCountText · $archivedCountText"
+        } else {
+            activeCountText
+        }
+        Text(
+            text = countsText,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(
+                horizontal = CrewTallyTheme.dimens.screenEdge,
+                vertical = CrewTallyTheme.dimens.spaceXs,
+            ),
+        )
+
         val searchLabel = stringResource(R.string.clerks_search_placeholder)
         CrewTallyTextField(
             value = uiState.searchQuery,
@@ -112,8 +138,8 @@ fun ClerkListScreen(
                             )
                         }
                     }
-                    items(uiState.activeClerks, key = { it.id }) { clerk ->
-                        ClerkRowItem(clerk = clerk, onClick = { onOpenClerk(clerk.id) })
+                    itemsIndexed(uiState.activeClerks, key = { _, clerk -> clerk.id }) { index, clerk ->
+                        ClerkRowItem(clerk = clerk, displayNumber = index + 1, onClick = { onOpenClerk(clerk.id) })
                     }
 
                     item {
@@ -132,8 +158,13 @@ fun ClerkListScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        items(uiState.archivedClerks, key = { it.id }) { clerk ->
-                            ClerkRowItem(clerk = clerk, isArchived = true, onClick = { onOpenClerk(clerk.id) })
+                        itemsIndexed(uiState.archivedClerks, key = { _, clerk -> clerk.id }) { index, clerk ->
+                            ClerkRowItem(
+                                clerk = clerk,
+                                displayNumber = index + 1,
+                                isArchived = true,
+                                onClick = { onOpenClerk(clerk.id) },
+                            )
                         }
                     }
                 }
@@ -151,15 +182,19 @@ fun ClerkListScreen(
 }
 
 @Composable
-private fun ClerkRowItem(clerk: ClerkRow, onClick: () -> Unit, isArchived: Boolean = false) {
+private fun ClerkRowItem(clerk: ClerkRow, displayNumber: Int, onClick: () -> Unit, isArchived: Boolean = false) {
+    // "1. Ahmad Khalil" (v1.2 LOCKED): the number lives in the title itself, so TalkBack reads
+    // it as part of the row's single mergeDescendants announcement rather than a duplicated
+    // separate label.
+    val numberedName = stringResource(R.string.clerks_numbered_row, displayNumber, clerk.name)
     CrewTallyListRow(
-        title = clerk.name,
+        title = numberedName,
         subtitle = clerk.phone.ifBlank { null },
         onClick = onClick,
         contentDescription = if (isArchived) {
-            stringResource(R.string.cd_archived_record, clerk.name)
+            stringResource(R.string.cd_archived_record, numberedName)
         } else {
-            clerk.name
+            numberedName
         },
     )
 }
