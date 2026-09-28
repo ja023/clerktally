@@ -42,6 +42,26 @@ data class OwedClerkGroup(
     val clerks: List<OwedClerkRow>,
 )
 
+/**
+ * One clerk's combined owed total in ONE currency on the Home dashboard's "By clerk" view, with
+ * the per-project rows that make it up (sorted by amount descending). A clerk owed on two
+ * projects in the same currency appears once with the sum; a clerk owed in two currencies
+ * appears once per currency group, since amounts are never summed across currencies (LOCKED).
+ */
+data class OwedClerkTotal(
+    val clerkId: String,
+    val clerkName: String,
+    val currency: String,
+    val total: Long,
+    val projects: List<OwedClerkRow>,
+)
+
+/** One currency's group of per-clerk totals, sorted by total descending within the group. */
+data class OwedClerkTotalGroup(
+    val currency: String,
+    val clerks: List<OwedClerkTotal>,
+)
+
 data class HomeUiState(
     /** Active projects, each with a "Take attendance" shortcut (name + company). */
     val activeProjects: List<ProjectSummary> = emptyList(),
@@ -49,6 +69,8 @@ data class HomeUiState(
     val outstanding: List<OutstandingTotal> = emptyList(),
     /** Clerks who are owed money, grouped per currency (never flat-sorted across currencies). */
     val owedClerkGroups: List<OwedClerkGroup> = emptyList(),
+    /** The same owed rows folded into one entry per clerk (per currency), for the "By clerk" view. */
+    val owedClerkTotalGroups: List<OwedClerkTotalGroup> = emptyList(),
     val isLoaded: Boolean = false,
 )
 
@@ -111,10 +133,29 @@ class HomeViewModel(
             )
         }
 
+        val owedClerkTotalGroups = owedClerkGroups.map { group ->
+            OwedClerkTotalGroup(
+                currency = group.currency,
+                clerks = group.clerks
+                    .groupBy { it.clerkId }
+                    .map { (clerkId, rows) ->
+                        OwedClerkTotal(
+                            clerkId = clerkId,
+                            clerkName = rows.first().clerkName,
+                            currency = group.currency,
+                            total = rows.sumOf { it.owed },
+                            projects = rows, // already sorted by amount descending
+                        )
+                    }
+                    .sortedByDescending { it.total },
+            )
+        }
+
         HomeUiState(
             activeProjects = activeProjects,
             outstanding = outstanding,
             owedClerkGroups = owedClerkGroups,
+            owedClerkTotalGroups = owedClerkTotalGroups,
             isLoaded = true,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), HomeUiState())

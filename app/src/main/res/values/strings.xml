@@ -289,6 +289,16 @@
     <string name="home_all_settled">All settled. Nobody is owed right now.</string>
     <string name="home_owed_heading">Who\'s owed</string>
     <string name="home_owed_row_description">%1$s. %2$s. %3$s owed.</string>
+    <string name="home_owed_by_project">By project</string>
+    <string name="home_owed_by_clerk">By clerk</string>
+    <string name="home_owed_search_placeholder">Search by clerk or project</string>
+    <string name="home_owed_no_matches">Nobody owed matches your search.</string>
+    <string name="home_owed_total_description">%1$s. %2$s owed in total, %3$s. Open clerk profile.</string>
+    <string name="home_owed_breakdown_description">%1$s on %2$s. %3$s owed.</string>
+    <plurals name="home_owed_project_count">
+        <item quantity="one">%d project</item>
+        <item quantity="other">%d projects</item>
+    </plurals>
 
     <!-- Clerk profile (Phase 4) -->
     <string name="profile_totals_heading">Totals</string>

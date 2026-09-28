@@ -187,6 +187,43 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `by-clerk view folds one clerk's projects into a single total per currency with a breakdown`() = runTest {
+        projectDao.companyNames = mapOf("co1" to "Acme")
+        projectDao.seed(
+            ProjectEntity(id = "p1", companyId = "co1", name = "Warehouse", startDate = jan1, currency = "USD", status = ProjectStatus.ACTIVE),
+            ProjectEntity(id = "p2", companyId = "co1", name = "Stocktake", startDate = jan1, currency = "USD", status = ProjectStatus.ACTIVE),
+            ProjectEntity(id = "p3", companyId = "co1", name = "Audit", startDate = jan1, currency = "EUR", status = ProjectStatus.ACTIVE),
+        )
+        clerkDao.seed(ClerkEntity(id = "c1", name = "Ali"), ClerkEntity(id = "c2", name = "Sam"))
+        attendanceEntryDao.seed(
+            AttendanceEntryEntity("a1", "p1", "c1", jan1, present = true, rateSnapshot = 1000), // USD c1@p1 1000
+            AttendanceEntryEntity("a2", "p2", "c1", jan1, present = true, rateSnapshot = 3000), // USD c1@p2 3000
+            AttendanceEntryEntity("a3", "p2", "c2", jan1, present = true, rateSnapshot = 3500), // USD c2@p2 3500
+            AttendanceEntryEntity("a4", "p3", "c1", jan1, present = true, rateSnapshot = 2000), // EUR c1@p3 2000
+        )
+
+        val vm = buildViewModel()
+        var latest = HomeUiState()
+        val job = launch(Dispatchers.Unconfined) { vm.uiState.collect { latest = it } }
+
+        // USD 7500 before EUR 2000, mirroring the outstanding totals order.
+        assertEquals(listOf("USD", "EUR"), latest.owedClerkTotalGroups.map { it.currency })
+
+        val usd = latest.owedClerkTotalGroups[0].clerks
+        assertEquals(listOf("c1", "c2"), usd.map { it.clerkId }) // 4000 > 3500
+        assertEquals(4000L, usd[0].total)
+        assertEquals(listOf("p2", "p1"), usd[0].projects.map { it.projectId }) // breakdown by amount
+        assertEquals(3500L, usd[1].total)
+
+        // Ali's EUR money stays in its own group — never summed with his USD total.
+        val eur = latest.owedClerkTotalGroups[1].clerks
+        assertEquals(1, eur.size)
+        assertEquals(2000L, eur[0].total)
+
+        job.cancel()
+    }
+
+    @Test
     fun `empty database yields empty sections but a loaded state`() = runTest {
         val vm = buildViewModel()
         var latest = HomeUiState()
@@ -196,6 +233,7 @@ class HomeViewModelTest {
         assertTrue(latest.activeProjects.isEmpty())
         assertTrue(latest.outstanding.isEmpty())
         assertTrue(latest.owedClerkGroups.isEmpty())
+        assertTrue(latest.owedClerkTotalGroups.isEmpty())
 
         job.cancel()
     }
